@@ -81,8 +81,10 @@
 
     var bars = topicRank.slice(0, 12).map(function (k) {
       var i = parseInt(k, 10);
+      // 平方根刻度：最多与最少相差近百倍，线性刻度会让除首项外的柱子几乎不可见
+      var w = Math.sqrt(topicCount[k] / maxT) * 100;
       return '<div class="tbar"><span class="name">' + esc(tname(i)) + '</span>' +
-        '<span class="track"><i class="fill" style="width:' + (topicCount[k] / maxT * 100).toFixed(1) +
+        '<span class="track"><i class="fill" style="width:' + w.toFixed(1) +
         '%;background:' + tcolor(i) + '"></i></span>' +
         '<span class="n">' + topicCount[k] + '</span></div>';
     }).join('');
@@ -143,13 +145,16 @@
   }
 
   function sessionCard(s) {
-    var top = Object.keys(s.topics).slice(0, 3).map(function (k) {
+    // 按出现次数排序后再取前三，否则每张卡片都只会显示同一组「最早出现」的话题
+    var top = Object.keys(s.topics)
+      .sort(function (a, b) { return s.topics[b] - s.topics[a]; })
+      .slice(0, 3).map(function (k) {
       return '<span style="color:' + tcolor(parseInt(k, 10)) + '">' + esc(tname(parseInt(k, 10))) + '</span>';
     }).join(' · ');
     return '<a class="qcard" href="#/archive/' + s.id + '">' +
       '<div class="tag">' + esc(s.date.replace('-', '.')) + ' ' + esc(s.week) + '</div>' +
       '<p class="zh">' + esc(s.start) + ' — ' + esc(s.end) + '</p>' +
-      '<p class="note">' + esc(top) + '</p>' +
+      '<p class="note">' + top + '</p>' +
       '<div class="meta"><span>' + s.count + ' 条 · ' + s.dur + ' 分钟</span><span>阅读 →</span></div>' +
       '</a>';
   }
@@ -287,7 +292,9 @@
         '"></i>' + esc(tname(g.topic)) + '<em>' + esc(g.time) + '</em></button>';
     }).join('');
 
-    var topT = Object.keys(cur.topics).slice(0, 4).map(function (k) {
+    var topT = Object.keys(cur.topics)
+      .sort(function (a, b) { return cur.topics[b] - cur.topics[a]; })
+      .slice(0, 4).map(function (k) {
       var i = parseInt(k, 10);
       return '<span><b style="color:' + tcolor(i) + '">' + esc(tname(i)) + '</b> ' + cur.topics[k] + '</span>';
     }).join('');

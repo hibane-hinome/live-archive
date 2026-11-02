@@ -105,7 +105,12 @@ def main():
         'quotes': q_out,
     }
     js = 'window.DATA = ' + json.dumps(data, ensure_ascii=False, separators=(',', ':')) + ';\n'
-    ver = hashlib.sha256(js.encode('utf-8')).hexdigest()[:10]
+    # 版本号覆盖 data / app / style 三者：任一改动都会让浏览器重新取，避免发布后看到旧缓存
+    h = hashlib.sha256(js.encode('utf-8'))
+    for rel in ('assets/app.js', 'assets/style.css'):
+        with open(os.path.join(site_dir, rel), 'rb') as f:
+            h.update(f.read())
+    ver = h.hexdigest()[:10]
 
     # ---- 输出 dist ----
     if os.path.isdir(dist):
