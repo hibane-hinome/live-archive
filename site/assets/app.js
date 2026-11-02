@@ -139,7 +139,7 @@
         '<div class="qgrid">' + D.sessions.slice().reverse().map(sessionCard).join('') + '</div>' +
       '</section>';
 
-    document.getElementById('footMeta').textContent = '生成于 ' + D.meta.generated;
+    document.getElementById('footMeta').textContent = '更新于 ' + D.meta.generated;
   }
 
   function sessionCard(s) {
@@ -188,7 +188,7 @@
       renderQuoteList();
     });
     renderQuoteList();
-    document.getElementById('footMeta').textContent = '生成于 ' + D.meta.generated;
+    document.getElementById('footMeta').textContent = '更新于 ' + D.meta.generated;
   }
 
   function renderQuoteList() {
@@ -338,7 +338,7 @@
 
     renderList(sid);
     if (jumpT) setTimeout(function () { jump(jumpT, true); }, 80);
-    document.getElementById('footMeta').textContent = '生成于 ' + D.meta.generated;
+    document.getElementById('footMeta').textContent = '更新于 ' + D.meta.generated;
   }
 
   function rowHTML(r, q, showSession) {
@@ -406,7 +406,7 @@
               esc(s.date.replace('-', '.')) + '（' + s.count + ' 条）</a>';
           }).join('　') + '</p></div>' +
       '</section>';
-    document.getElementById('footMeta').textContent = '生成于 ' + D.meta.generated;
+    document.getElementById('footMeta').textContent = '更新于 ' + D.meta.generated;
   }
 
   route();

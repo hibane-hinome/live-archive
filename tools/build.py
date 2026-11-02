@@ -10,12 +10,10 @@ import json
 import os
 import shutil
 import sys
-from datetime import datetime, timedelta, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import common
 
-CST = timezone(timedelta(hours=8))
 COPY = ['index.html', 'assets/app.js', 'assets/style.css', 'brand']
 
 
@@ -97,7 +95,8 @@ def main():
             'sessionCount': len(sess_out),
             'firstDate': sess_out[0]['dateLong'],
             'lastDate': sess_out[-1]['dateLong'],
-            'generated': datetime.now(CST).strftime('%Y-%m-%d %H:%M'),
+            # 用最后一场的结束时间，保证同样的数据永远构建出同样的结果
+            'generated': sess_out[-1]['dateLong'] + ' ' + sess_out[-1]['end'],
             'quoteCount': len(q_out),
         },
         'topics': [[common.TOPIC_NAMES[i], common.TOPIC_COLORS[i]] for i in range(len(common.TOPIC_NAMES))],

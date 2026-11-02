@@ -106,7 +106,15 @@ def main():
         # 4. 有变化才提交
         status = run(['git', 'status', '--porcelain', 'site/data']).stdout.strip()
         if not status:
-            log('数据无变化，不提交')
+            # 上一次可能 commit 成功但 push 失败，这里补推一次
+            ahead = run(['git', 'rev-list', '--count', '@{upstream}..HEAD'], check=False)
+            n = int(ahead.stdout.strip() or 0) if ahead.returncode == 0 else 0
+            if n:
+                log('数据无变化，但有 %d 个提交未推送，补推' % n)
+                run(['git', 'push', cfg['publish']['remote'], cfg['publish']['branch']])
+                log('已推送')
+            else:
+                log('数据无变化，不提交')
             return 0
 
         run(['git', 'add', 'site/data'])
