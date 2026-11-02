@@ -26,16 +26,32 @@ tools/
 
 ## 日常用法
 
+**默认不需要做任何事。** 直播结束后由 Windows 计划任务 `live-archive publish` 自动完成：
+每小时的第 20 分检查一次数据库，有新内容就导出、构建、提交并推送，随后 GitHub Actions 自动发布。
+
+手动入口（需要立刻发布、或改了金句想马上看效果时用）：
+
+```bat
+publish.cmd                :: 双击即可；要等最后一条记录静默满 10 分钟才会动
+publish.cmd --force        :: 刚下播就想发，跳过静默判断
+publish.cmd --dry-run      :: 只报告会改什么，不写文件、不提交
+```
+
+底层脚本：
+
 ```bash
 python tools/export.py                     # 从数据库同步场次（幂等，内容没变不落盘）
 python tools/build.py                      # 生成 dist/
 python -m http.server -d dist 8766         # 本地预览
-python tools/publish.py --dry-run          # 看会不会有变更，不写不提交
-python tools/publish.py                    # 真有新数据时才会 commit + push
+python tools/publish.py                    # 导出 → 构建校验 → commit → push
 ```
 
-`publish.py` 会先看最后一条记录是否已静默 10 分钟（`quiet_min`），避免把直播到一半的数据推上去；
-没有变化时直接退出，因此可以放心地每小时跑一次。
+`publish.py` 的判断顺序：最后一条记录静默不足 `quiet_min`（默认 10 分钟）就认为还在直播，直接退出；
+导出后数据无变化则不提交；若上次提交成功但推送失败，下次会补推，不会卡住。
+所有动作记录在 `.state/publish.log`。
+
+发布后约 40 秒生效。看到新内容再刷新页面，若仍是旧数据，多半是浏览器缓存——
+`data.js` 带内容哈希，正常情况下会自动失效。
 
 ## 数据规则
 
