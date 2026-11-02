@@ -121,6 +121,12 @@ def main():
         os.makedirs(os.path.dirname(dst), exist_ok=True)
         if os.path.isdir(src):
             shutil.copytree(src, dst)
+        elif item.endswith(('.js', '.css', '.html')):
+            # 文本资源统一按 LF 写出：工作区若是 CRLF，本地与 CI 算出的版本号会不一致
+            with open(src, encoding='utf-8') as f:
+                text = f.read()
+            with open(dst, 'w', encoding='utf-8', newline='\n') as f:
+                f.write(text)
         else:
             shutil.copy2(src, dst)
     os.makedirs(os.path.join(dist, 'assets'), exist_ok=True)
