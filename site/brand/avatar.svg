@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1c1511"/><stop offset="1" stop-color="#0b0807"/>
+    </linearGradient>
+    <radialGradient id="ember" cx="0.5" cy="1.16" r="0.92">
+      <stop offset="0" stop-color="rgba(255,110,50,.42)"/><stop offset="0.38" stop-color="rgba(255,96,40,.14)"/>
+      <stop offset="1" stop-color="rgba(255,96,40,0)"/>
+    </radialGradient>
+    <radialGradient id="warm" cx="0.16" cy="0.08" r="0.7">
+      <stop offset="0" stop-color="rgba(232,196,137,.14)"/><stop offset="1" stop-color="rgba(232,196,137,0)"/>
+    </radialGradient>
+    <linearGradient id="ink" x1="0.38" y1="0" x2="0.62" y2="1">
+      <stop offset="0" stop-color="#fff1dc"/><stop offset="0.4" stop-color="#ffc98c"/>
+      <stop offset="0.72" stop-color="#ff8a46"/><stop offset="1" stop-color="#f2622a"/>
+    </linearGradient>
+    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="10" stdDeviation="18" flood-color="rgba(255,110,50,.34)" flood-opacity="1"/>
+    </filter>
+  </defs>
+  <rect width="1024" height="1024" rx="224" fill="url(#bg)"/>
+  <rect width="1024" height="1024" rx="224" fill="url(#ember)"/>
+  <rect width="1024" height="1024" rx="224" fill="url(#warm)"/>
+  <g filter="url(#soft)" transform="translate(214.54,740.58) scale(0.5920,-0.5920)">
+    <path d="M173 658 319 613Q307 560 291.5 505.5Q276 451 255.5 403.0Q235 355 209 319L62 386Q88 421 109.0 464.5Q130 508 146.5 557.5Q163 607 173 658ZM777 658 939 599Q918 549 895.0 498.0Q872 447 850.0 401.0Q828 355 808 320L680 373Q699 412 717.5 460.5Q736 509 751.5 560.5Q767 612 777 658ZM414 849H579Q578 734 573.0 622.0Q568 510 547.0 405.5Q526 301 478.5 208.0Q431 115 347.0 37.5Q263 -40 129 -97Q115 -68 85.5 -31.5Q56 5 26 28Q150 77 225.0 142.5Q300 208 340.0 287.0Q380 366 395.0 456.5Q410 547 411.5 646.0Q413 745 414 849ZM552 491Q579 377 630.5 288.0Q682 199 767.0 139.5Q852 80 979 52Q963 36 944.5 11.5Q926 -13 909.5 -39.0Q893 -65 883 -86Q744 -46 654.0 28.5Q564 103 509.5 212.5Q455 322 419 467Z" fill="url(#ink)"/>
+  </g>
+  <rect x="7" y="7" width="1010" height="1010" rx="217" fill="none" stroke="rgba(255,196,150,.16)" stroke-width="2"/>
+</svg>

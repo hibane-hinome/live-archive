@@ -1,0 +1,14 @@
+# 数据源：指向本机 LiveCaptions-Translator 的数据库。换机器只改这一行。
+[source]
+db = "D:/forDesktop/LiveCaptions-Translator/bin/Release/net8.0-windows/translation_history.db"
+session_gap_min = 30   # 相邻记录超过这个间隔就算新的一场
+min_records = 20       # 少于这个条数的片段当作误录，不进站点
+quiet_min = 10         # 最后一条记录静默超过这个分钟数，才认为直播已结束
+
+[site]
+dir = "site"           # 前端源码 + 数据
+dist = "dist"          # 构建产物（不入库，由 CI 生成）
+
+[publish]
+remote = "origin"
+branch = "main"

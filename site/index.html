@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{TITLE}}</title>
+<meta name="description" content="{{DESC}}">
+<link rel="icon" href="brand/favicon.png" sizes="any">
+<link rel="apple-touch-icon" href="brand/favicon.png">
+<link rel="mask-icon" href="brand/avatar.svg" color="#ff7a45">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="glow" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+
+<header class="top">
+  <a class="brand" href="#/">
+    <span class="brand-mark">火</span>
+    <span class="brand-text">
+      <strong>{{STREAMER}}</strong>
+      <em>LIVE ARCHIVE</em>
+    </span>
+  </a>
+  <nav class="nav" id="nav">
+    <a href="#/" data-nav="home">首页</a>
+    <a href="#/quotes" data-nav="quotes">金句墙</a>
+    <a href="#/archive" data-nav="archive">直播档案</a>
+    <a href="#/about" data-nav="about">关于</a>
+  </nav>
+</header>
+
+<main id="app"></main>
+
+<footer class="foot">
+  <span>数据来源：本地字幕翻译记录 · 语音识别稿，已按语境校正</span>
+  <span id="footMeta"></span>
+</footer>
+
+<script src="assets/data.js?v={{V}}"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

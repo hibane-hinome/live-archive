@@ -1,0 +1,10 @@
+# 构建产物
+dist/
+# 发布脚本的运行状态与日志
+.state/
+# Python
+__pycache__/
+*.pyc
+# 系统文件
+.DS_Store
+Thumbs.db
