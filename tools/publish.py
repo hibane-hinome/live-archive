@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
-"""一场直播结束后：导出新数据 → 校验构建 → 提交并推送。
+"""一场直播结束后：导出新数据 → 校验构建 → 提交（默认不推送）。
+
+默认是 review 模式：只导出、构建、本地提交，等人工确认内容后
+再执行 `publish.cmd --push`（或 `git push`）推上 GitHub Pages。
 
   python tools/publish.py --dry-run     # 只看会发生什么，不写文件、不提交
-  python tools/publish.py               # 正常执行（无新数据时什么也不做）
+  python tools/publish.py               # 正常执行（无新数据时什么也不做；不推送）
   python tools/publish.py --force       # 忽略「可能还在直播」的判断
-  python tools/publish.py --no-push     # 只提交到本地
+  python tools/publish.py --push        # 提交后直接推送（人工确认后再用）
 """
 import argparse
 import json
@@ -64,11 +67,15 @@ def main():
     ap.add_argument('--config')
     ap.add_argument('--dry-run', action='store_true')
     ap.add_argument('--force', action='store_true')
-    ap.add_argument('--no-push', action='store_true')
+    ap.add_argument('--push', action='store_true', help='提交后推送到远端（默认只提交到本地，等人工 review）')
+    ap.add_argument('--no-push', action='store_true', help='已废弃：默认就不推送，保留仅为兼容旧调用')
     ap.add_argument('--all', action='store_true', help='全量导出场次（默认也是全量幂等重算）')
     args = ap.parse_args()
 
     cfg = common.load_config(args.config)
+    # 推送需要显式意愿：命令行 --push，或 config.toml 里 [publish] auto_push = true
+    auto_push = bool(cfg['publish'].get('auto_push', False))
+    do_push = args.push and not args.no_push or auto_push and not args.no_push
 
     if not acquire_lock():
         return 0
@@ -106,13 +113,15 @@ def main():
         # 4. 有变化才提交
         status = run(['git', 'status', '--porcelain', 'site/data']).stdout.strip()
         if not status:
-            # 上一次可能 commit 成功但 push 失败，这里补推一次
+            # 上一次可能 commit 成功但还没推送（review 模式），这里只提醒不代推
             ahead = run(['git', 'rev-list', '--count', '@{upstream}..HEAD'], check=False)
             n = int(ahead.stdout.strip() or 0) if ahead.returncode == 0 else 0
-            if n:
+            if n and do_push:
                 log('数据无变化，但有 %d 个提交未推送，补推' % n)
                 run(['git', 'push', cfg['publish']['remote'], cfg['publish']['branch']])
                 log('已推送')
+            elif n:
+                log('数据无变化；有 %d 个本地提交待 review，确认后执行 publish.cmd --push' % n)
             else:
                 log('数据无变化，不提交')
             return 0
@@ -124,8 +133,8 @@ def main():
         run(['git', 'commit', '-m', msg])
         log('已提交：' + msg)
 
-        if args.no_push:
-            log('按参数跳过推送')
+        if not do_push:
+            log('review 模式：已在本地提交，未推送。确认内容后执行 publish.cmd --push（或 git push）')
             return 0
         run(['git', 'push', cfg['publish']['remote'], cfg['publish']['branch']])
         log('已推送到 %s/%s' % (cfg['publish']['remote'], cfg['publish']['branch']))

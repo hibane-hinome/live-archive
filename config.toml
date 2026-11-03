@@ -12,3 +12,5 @@ dist = "dist"          # 构建产物（不入库，由 CI 生成）
 [publish]
 remote = "origin"
 branch = "main"
+auto_push = false      # false = review 模式：自动任务只做导出/构建/本地提交，
+                       # 人工确认内容后执行 publish.cmd --push 才会上 GitHub

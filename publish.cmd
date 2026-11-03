@@ -4,10 +4,10 @@ setlocal
 
 rem ============================================================
 rem  live-archive : one-click publish
-rem    publish.cmd            normal (waits until stream has been quiet 10 min)
+rem    publish.cmd            export + build + local commit (NO push, review mode)
+rem    publish.cmd --push     push to GitHub after commit (use after review)
 rem    publish.cmd --force    publish right now even if stream just ended
 rem    publish.cmd --dry-run  show what would change, change nothing
-rem    publish.cmd --no-push  commit locally only
 rem ============================================================
 
 cd /d "%~dp0"

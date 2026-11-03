@@ -59,6 +59,7 @@
     state.hideEmpty = false;
     if (r.view === 'quotes') { setNav('quotes'); renderQuotes(); }
     else if (r.view === 'archive') { setNav('archive'); renderArchive(r.sid, r.q.t); }
+    else if (r.view === 'diary') { setNav('diary'); renderDiary(); }
     else if (r.view === 'about') { setNav('about'); renderAbout(); }
     else { setNav('home'); renderHome(); }
     window.scrollTo(0, 0);
@@ -78,6 +79,7 @@
     var last = D.sessions[D.sessions.length - 1];
     var lastQuotes = D.quotes.filter(function (q) { return q.s === last.id; }).slice(0, 3);
     var maxT = topicCount[topicRank[0]];
+    var latestDiary = (D.diary && D.diary.length) ? D.diary[0] : null;
 
     var bars = topicRank.slice(0, 12).map(function (k) {
       var i = parseInt(k, 10);
@@ -132,15 +134,65 @@
       '</section>' +
 
       '<section class="sec">' +
-        '<div class="sec-head"><h2><i>02</i>话题分布</h2><span class="more">' + num(D.meta.total) + ' 条记录的关键词归类</span></div>' +
+        '<div class="sec-head"><h2><i>02</i>今日直播</h2><a class="more" href="#/diary">全部日记 →</a></div>' +
+        (latestDiary ? latestDiaryCard(latestDiary) : '<div class="empty">还没有日记。</div>') +
+      '</section>' +
+
+      '<section class="sec">' +
+        '<div class="sec-head"><h2><i>03</i>话题分布</h2><span class="more">' + num(D.meta.total) + ' 条记录的关键词归类</span></div>' +
         '<div class="tbars">' + bars + '</div>' +
       '</section>' +
 
       '<section class="sec">' +
-        '<div class="sec-head"><h2><i>03</i>全部场次</h2><a class="more" href="#/archive">档案库 →</a></div>' +
+        '<div class="sec-head"><h2><i>04</i>全部场次</h2><a class="more" href="#/archive">档案库 →</a></div>' +
         '<div class="qgrid">' + D.sessions.slice().reverse().map(sessionCard).join('') + '</div>' +
       '</section>';
 
+    document.getElementById('footMeta').textContent = '更新于 ' + D.meta.generated;
+  }
+
+  /* ---------- diary ---------- */
+  function latestDiaryCard(d) {
+    var qn = D.quotes.filter(function (q) { return q.s === d.s; }).length;
+    return '<article class="dcard">' +
+      '<div class="dhead">' +
+        '<div class="ddate">' + esc(d.dateLong) + ' <em>' + esc(d.week) + '</em></div>' +
+        '<div class="dinfo">' + esc(d.start) + ' – ' + esc(d.end) + ' · ' + d.count + ' 条记录' +
+          (qn ? ' · ' + qn + ' 句金句' : '') + '</div>' +
+      '</div>' +
+      '<h3 class="dtitle">' + esc(d.title) + '</h3>' +
+      (d.tagline ? '<div class="dtag">' + esc(d.tagline) + '</div>' : '') +
+      '<p class="dexcerpt">' + esc(d.body[0] || '') + '</p>' +
+      '<div class="dlinks"><a href="#/diary">读全文 →</a><a href="#/archive/' + d.s + '">逐字稿 →</a></div>' +
+    '</article>';
+  }
+
+  function renderDiary() {
+    var list = D.diary || [];
+    var html = list.map(function (d) {
+      var qn = D.quotes.filter(function (q) { return q.s === d.s; }).length;
+      return '<article class="dentry">' +
+        '<div class="dhead">' +
+          '<div class="ddate">' + esc(d.dateLong) + ' <em>' + esc(d.week) + '</em></div>' +
+          '<div class="dinfo">' + esc(d.start) + ' – ' + esc(d.end) + ' · ' + d.dur + ' 分钟 · ' + d.count + ' 条记录' +
+            (qn ? ' · ' + qn + ' 句金句' : '') + '</div>' +
+        '</div>' +
+        '<h3 class="dtitle">' + esc(d.title) + '</h3>' +
+        (d.tagline ? '<div class="dtag">' + esc(d.tagline) + '</div>' : '') +
+        '<div class="dbody">' + d.body.map(function (p) { return '<p>' + esc(p) + '</p>'; }).join('') + '</div>' +
+        '<div class="dlinks"><a href="#/archive/' + d.s + '">看这一场的逐字稿 →</a></div>' +
+      '</article>';
+    }).join('');
+
+    app.innerHTML =
+      '<section class="hero" style="padding-bottom:26px">' +
+        '<div class="kicker">STREAM DIARY</div>' +
+        '<h1 style="font-size:clamp(38px,5.4vw,64px)">今日<span class="thin">，</span>播了<span class="accent">什么</span></h1>' +
+        '<p class="lead">每场直播后整理的记录摘要：聊了什么、回应了谁、讲了哪些冷知识。' +
+        '只做事实性归纳，不做评价；日记之外随时可以点进对应场次的逐字稿核对原文。当前共 ' +
+        list.length + ' 篇。</p>' +
+      '</section>' +
+      '<div class="dlist">' + (html || '<div class="empty">还没有日记。</div>') + '</div>';
     document.getElementById('footMeta').textContent = '更新于 ' + D.meta.generated;
   }
 

@@ -15,6 +15,7 @@ site/
   brand/                 头像与 favicon
   data/
     profile.json         主播名、标题、站点描述
+    diary.json           直播日记（人工整理的每场摘要，按 date 挂到场次）
     quotes.json          人工挑选的句子（按 date + 时间戳挂到对应场次）
     sessions/*.json       每场直播一份：话题带、目录、逐条记录
 tools/
@@ -26,13 +27,15 @@ tools/
 
 ## 日常用法
 
-**默认不需要做任何事。** 直播结束后由 Windows 计划任务 `live-archive publish` 自动完成：
-每小时的第 20 分检查一次数据库，有新内容就导出、构建、提交并推送，随后 GitHub Actions 自动发布。
+**默认不需要做任何事，但推送需要你确认。** 直播结束后由 Windows 计划任务 `live-archive publish`
+自动完成：每小时的第 20 分检查一次数据库，有新内容就导出、构建并**提交到本地**（review 模式，
+不上传）。你确认内容没问题后，再运行 `publish.cmd --push` 推送，随后 GitHub Actions 自动发布。
 
-手动入口（需要立刻发布、或改了金句想马上看效果时用）：
+手动入口：
 
 ```bat
-publish.cmd                :: 双击即可；要等最后一条记录静默满 10 分钟才会动
+publish.cmd                :: 导出 + 构建 + 本地提交（不推送，等 review）
+publish.cmd --push         :: 确认内容后执行，推送到 GitHub
 publish.cmd --force        :: 刚下播就想发，跳过静默判断
 publish.cmd --dry-run      :: 只报告会改什么，不写文件、不提交
 ```
@@ -43,11 +46,13 @@ publish.cmd --dry-run      :: 只报告会改什么，不写文件、不提交
 python tools/export.py                     # 从数据库同步场次（幂等，内容没变不落盘）
 python tools/build.py                      # 生成 dist/
 python -m http.server -d dist 8766         # 本地预览
-python tools/publish.py                    # 导出 → 构建校验 → commit → push
+python tools/publish.py                    # 导出 → 构建校验 → commit（默认不推送）
+python tools/publish.py --push             # 同上，但提交后推送
 ```
 
 `publish.py` 的判断顺序：最后一条记录静默不足 `quiet_min`（默认 10 分钟）就认为还在直播，直接退出；
-导出后数据无变化则不提交；若上次提交成功但推送失败，下次会补推，不会卡住。
+导出后数据无变化则不提交；**默认不推送**——本地提交后由人工 review，确认后用 `--push` 推送
+（或在 `config.toml` 里把 `[publish] auto_push` 改为 `true` 恢复全自动）。
 所有动作记录在 `.state/publish.log`。
 
 发布后约 40 秒生效。看到新内容再刷新页面，若仍是旧数据，多半是浏览器缓存——

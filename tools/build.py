@@ -61,6 +61,13 @@ def main():
     with open(os.path.join(site_dir, 'data', 'quotes.json'), encoding='utf-8') as f:
         quotes_raw = json.load(f)
 
+    # 直播日记：人工整理的每场摘要，按 date 挂到对应场次
+    diary_raw = []
+    diary_path = os.path.join(site_dir, 'data', 'diary.json')
+    if os.path.exists(diary_path):
+        with open(diary_path, encoding='utf-8') as f:
+            diary_raw = json.load(f)
+
     sess_out, recs_out = [], []
     for i, s in enumerate(sessions):
         sess_out.append({
@@ -86,6 +93,20 @@ def main():
             'jp': q['jp'], 'zh': q['zh'], 'note': q.get('note', ''),
         })
 
+    # 日记也按 date 找场次；文件顺序即展示顺序（最新的写在最前）
+    skipped_diary, diary_out = [], []
+    for d in diary_raw:
+        hit = next((s for s in sess_out if s['date'] == d['date']), None)
+        if not hit:
+            skipped_diary.append(d['date'])
+            continue
+        diary_out.append({
+            's': hit['id'], 'date': hit['date'], 'dateLong': hit['dateLong'],
+            'week': hit['week'], 'start': hit['start'], 'end': hit['end'],
+            'dur': hit['dur'], 'count': hit['count'],
+            'title': d['title'], 'tagline': d.get('tagline', ''), 'body': d['body'],
+        })
+
     data = {
         'meta': {
             'streamer': profile['streamer'],
@@ -98,11 +119,13 @@ def main():
             # 用最后一场的结束时间，保证同样的数据永远构建出同样的结果
             'generated': sess_out[-1]['dateLong'] + ' ' + sess_out[-1]['end'],
             'quoteCount': len(q_out),
+            'diaryCount': len(diary_out),
         },
         'topics': [[common.TOPIC_NAMES[i], common.TOPIC_COLORS[i]] for i in range(len(common.TOPIC_NAMES))],
         'sessions': sess_out,
         'records': recs_out,
         'quotes': q_out,
+        'diary': diary_out,
     }
     js = 'window.DATA = ' + json.dumps(data, ensure_ascii=False, separators=(',', ':')) + ';\n'
     # 版本号覆盖 data / app / style 三者：任一改动都会让浏览器重新取，避免发布后看到旧缓存
@@ -144,10 +167,12 @@ def main():
         f.write(html)
     open(os.path.join(dist, '.nojekyll'), 'w').close()
 
-    print('dist: %d 场 / %d 条 / %d 句 · data.js %d KB · v=%s'
-          % (len(sess_out), len(recs_out), len(q_out), len(js.encode('utf-8')) // 1024, ver))
+    print('dist: %d 场 / %d 条 / %d 句 / %d 篇日记 · data.js %d KB · v=%s'
+          % (len(sess_out), len(recs_out), len(q_out), len(diary_out), len(js.encode('utf-8')) // 1024, ver))
     if skipped:
         print('!! 找不到对应场次的金句:', ', '.join(skipped))
+    if skipped_diary:
+        print('!! 找不到对应场次的日记:', ', '.join(skipped_diary))
     return 0
 
 
