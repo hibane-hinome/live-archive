@@ -151,11 +151,11 @@ main{position:relative;z-index:2;max-width:1240px;margin:0 auto;padding:0 40px 9
 }
 .qcard .jp{
   font-family:var(--jp);font-size:14.5px;line-height:1.95;color:var(--dim);
-  margin:0 0 14px;letter-spacing:.01em;
+  margin:0 0 14px;letter-spacing:.01em;white-space:pre-line;
 }
 .qcard .zh{
   font-size:16px;line-height:1.85;color:var(--ink);margin:0;
-  font-weight:500;
+  font-weight:500;white-space:pre-line;
 }
 .qcard .note{
   margin:14px 0 0;padding-top:13px;border-top:1px dashed var(--line);

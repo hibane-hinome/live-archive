@@ -92,7 +92,13 @@
     }).join('');
 
     var mini = lastQuotes.map(function (q) {
-      return '<div class="qmini"><p>' + esc(q.zh) + '</p><span>' + esc(q.t) + '</span></div>';
+      // 摘录是整段对话，首页只摘要她自己的那句：去掉开头的观众提问，再截断
+      var lines = q.zh.split('\n').filter(function (l, i) {
+        return !(i === 0 && l.charAt(0) === '「');
+      });
+      var txt = lines.join(' ').replace(/^——/, '');
+      if (txt.length > 92) txt = txt.slice(0, 92).replace(/[，、]$/, '') + '…';
+      return '<div class="qmini"><p>' + esc(txt) + '</p><span>' + esc(q.t) + '</span></div>';
     }).join('');
 
     app.innerHTML =
@@ -105,11 +111,11 @@
         '<div class="stats">' +
           '<div class="stat"><b>' + D.meta.sessionCount + '<i>场</i></b><span>直播记录</span></div>' +
           '<div class="stat"><b>' + num(D.meta.total) + '<i>条</i></b><span>逐字记录</span></div>' +
-          '<div class="stat"><b>' + D.meta.quoteCount + '<i>句</i></b><span>精选金句</span></div>' +
+          '<div class="stat"><b>' + D.meta.quoteCount + '<i>段</i></b><span>摘录段落</span></div>' +
           '<div class="stat"><b>' + D.topics.length + '<i>类</i></b><span>话题标签</span></div>' +
         '</div>' +
         '<div class="hero-cta">' +
-          '<a class="btn primary" href="#/quotes">读金句 →</a>' +
+          '<a class="btn primary" href="#/quotes">读摘录 →</a>' +
           '<a class="btn" href="#/archive">进档案库</a>' +
         '</div>' +
       '</section>' +
@@ -129,7 +135,7 @@
             '</div>' +
             '<a class="btn" href="#/archive/' + last.id + '">打开这一场</a>' +
           '</div>' +
-          '<div class="latest-r">' + (mini || '<div class="qmini"><p>这一场暂无收录金句。</p></div>') + '</div>' +
+          '<div class="latest-r">' + (mini || '<div class="qmini"><p>这一场暂无摘录。</p></div>') + '</div>' +
         '</div>' +
       '</section>' +
 
@@ -158,7 +164,7 @@
       '<div class="dhead">' +
         '<div class="ddate">' + esc(d.dateLong) + ' <em>' + esc(d.week) + '</em></div>' +
         '<div class="dinfo">' + esc(d.start) + ' – ' + esc(d.end) + ' · ' + d.count + ' 条记录' +
-          (qn ? ' · ' + qn + ' 句金句' : '') + '</div>' +
+          (qn ? ' · ' + qn + ' 段摘录' : '') + '</div>' +
       '</div>' +
       '<h3 class="dtitle">' + esc(d.title) + '</h3>' +
       (d.tagline ? '<div class="dtag">' + esc(d.tagline) + '</div>' : '') +
@@ -175,7 +181,7 @@
         '<div class="dhead">' +
           '<div class="ddate">' + esc(d.dateLong) + ' <em>' + esc(d.week) + '</em></div>' +
           '<div class="dinfo">' + esc(d.start) + ' – ' + esc(d.end) + ' · ' + d.dur + ' 分钟 · ' + d.count + ' 条记录' +
-            (qn ? ' · ' + qn + ' 句金句' : '') + '</div>' +
+            (qn ? ' · ' + qn + ' 段摘录' : '') + '</div>' +
         '</div>' +
         '<h3 class="dtitle">' + esc(d.title) + '</h3>' +
         (d.tagline ? '<div class="dtag">' + esc(d.tagline) + '</div>' : '') +
@@ -226,11 +232,11 @@
 
     app.innerHTML =
       '<section class="hero" style="padding-bottom:30px">' +
-        '<div class="kicker">SELECTED QUOTES</div>' +
-        '<h1 style="font-size:clamp(38px,5.4vw,64px)">金句<span class="thin">，</span><span class="accent">' + D.meta.quoteCount + '</span> 句</h1>' +
-        '<p class="lead">从 ' + num(D.meta.total) + ' 条记录中选出 ' + D.meta.quoteCount + ' 句，按话题分类；' +
-        '多数出自回应观众 SC 的段落。文本以语音识别稿为基础，只做断句与明显错字的整理，' +
-        '原始记录见对应场次的逐字稿。</p>' +
+        '<div class="kicker">TRANSCRIPT EXCERPTS</div>' +
+        '<h1 style="font-size:clamp(38px,5.4vw,64px)">摘录<span class="thin">，</span><span class="accent">' + D.meta.quoteCount + '</span> 段</h1>' +
+        '<p class="lead">从 ' + num(D.meta.total) + ' 条记录中选出 ' + D.meta.quoteCount + ' 段，按话题分类。' +
+        '每段都保留引出它的那句话或那件事，脱离上下文不容易读懂的，宁可长一点也不截断。' +
+        '文本以语音识别稿为基础，只做断句、明显错字与语序错乱的校正，不做润色；原始记录见对应场次的逐字稿。</p>' +
       '</section>' +
       '<div class="filters" id="filters">' + chips + '</div>' +
       '<div class="qgrid" id="qlist"></div>';
@@ -262,7 +268,7 @@
         '</div>' +
       '</article>';
     }).join('');
-    document.getElementById('qlist').innerHTML = html || '<div class="empty">这个标签下还没有句子。</div>';
+    document.getElementById('qlist').innerHTML = html || '<div class="empty">这个标签下还没有摘录。</div>';
   }
 
   app.addEventListener('click', function (e) {
@@ -361,7 +367,7 @@
             '<h2>' + esc(cur.date.replace('-', '.')) + ' <small>' + esc(cur.week) + '</small></h2>' +
             '<div class="meta"><span><b>' + esc(cur.start) + ' – ' + esc(cur.end) + '</b></span>' +
               '<span><b>' + cur.count + '</b> 条记录</span><span>约 <b>' + cur.dur + '</b> 分钟</span>' +
-              (qn ? '<span><b>' + qn + '</b> 句金句</span>' : '') +
+              (qn ? '<span><b>' + qn + '</b> 段摘录</span>' : '') +
               '<span>' + topT + '</span></div>' +
           '</div>' +
           '<div class="ribbon-wrap"><div class="ribbon">' + ribbon + '</div>' +
@@ -452,13 +458,13 @@
         ' 场、' + num(D.meta.total) + ' 条</b>。</p>' +
         '<p>原始数据来自 <code>translation_history.db</code>，筛掉了测试跑、播放录播与切片片段，' +
         '只保留完整直播场次。「今日直播」里的日记是每场结束后整理的事实性摘要（聊了什么、回应了谁），' +
-        '不做评价；选句与注释为人工整理：只做断句和明显错字的校正，不做润色，' +
+        '不做评价；摘录的取舍与注释为人工整理：只做断句、明显错字与语序的校正，不做润色，' +
         '也不对说话人作评价——判断留给读者，原文可在逐字稿里逐条核对。</p>' +
         '<div class="box"><h3>阅读提示</h3>' +
           '<p>语音识别稿存在错漏：人名、专有名词、梗经常识别错误（例如「ビリビリ」= bilibili、「スパツ」= SC）。' +
-          '金句卡里的日语已尽量还原成她实际说的句子，逐字稿里则保留了原始识别结果——所以两边会有细微差异。</p></div>' +
+          '摘录里的日语已尽量还原成她实际说的句子，逐字稿里则保留了原始识别结果——所以两边会有细微差异。</p></div>' +
         '<div class="box"><h3>技术说明</h3>' +
-          '<p>纯静态站点，无外部依赖，可离线打开。数据由 <code>build_site.py</code> 从数据库生成到 ' +
+          '<p>纯静态站点，无外部依赖，可离线打开。数据由 <code>tools/build.py</code> 从数据库生成到 ' +
           '<code>assets/data.js</code>，重跑一次即可更新全站。</p></div>' +
         '<div class="box"><h3>数据概览</h3>' +
           '<p>' + D.sessions.map(function (s) {

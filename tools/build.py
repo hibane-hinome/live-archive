@@ -167,10 +167,10 @@ def main():
         f.write(html)
     open(os.path.join(dist, '.nojekyll'), 'w').close()
 
-    print('dist: %d 场 / %d 条 / %d 句 / %d 篇日记 · data.js %d KB · v=%s'
+    print('dist: %d 场 / %d 条 / %d 段摘录 / %d 篇日记 · data.js %d KB · v=%s'
           % (len(sess_out), len(recs_out), len(q_out), len(diary_out), len(js.encode('utf-8')) // 1024, ver))
     if skipped:
-        print('!! 找不到对应场次的金句:', ', '.join(skipped))
+        print('!! 找不到对应场次的摘录:', ', '.join(skipped))
     if skipped_diary:
         print('!! 找不到对应场次的日记:', ', '.join(skipped_diary))
     return 0
