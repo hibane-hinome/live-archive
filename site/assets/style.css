@@ -306,6 +306,26 @@ mark{background:rgba(255,122,69,.28);color:#ffe9dc;border-radius:2px;padding:0 1
 .dlinks a{font-size:12px;letter-spacing:.06em;color:var(--dim);transition:.2s}
 .dlinks a:hover{color:var(--fire-soft)}
 
+/* notice: 机器翻译声明 */
+.notice{
+  margin:30px 0 0;padding:20px 22px;max-width:840px;
+  border:1px solid rgba(255,122,69,.25);border-left:2px solid var(--fire);
+  border-radius:2px 12px 12px 2px;
+  background:rgba(255,122,69,.05);
+}
+.notice h4{margin:0 0 10px;font-size:12px;letter-spacing:.18em;color:var(--fire-soft);font-weight:600}
+.notice p{margin:0;font-size:13px;line-height:2;color:var(--dim)}
+.notice p b{color:var(--ink-2);font-weight:500}
+.notice a{color:var(--fire-soft);border-bottom:1px solid rgba(255,122,69,.35);transition:.2s}
+.notice a:hover{color:#fff3e8}
+
+.arch-note{
+  margin:0 0 18px;padding:9px 14px;border-radius:8px;
+  border:1px solid rgba(255,122,69,.18);background:rgba(255,122,69,.04);
+  font-size:12px;line-height:1.9;color:var(--dim-2);
+}
+.arch-note b{color:var(--fire-soft);font-weight:500}
+
 /* about */
 .about{padding-top:64px;max-width:780px}
 .about h2{font-family:var(--jp);font-size:38px;font-weight:500;margin:0 0 20px}
