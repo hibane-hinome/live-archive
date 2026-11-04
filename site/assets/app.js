@@ -285,7 +285,7 @@
   function renderQuoteList() {
     var list = D.quotes.filter(function (q) {
       return (state.tag === '全部' || q.tag === state.tag) &&
-             (state.qs === '全部' || q.s === state.qs);
+             (state.qs === '全部' || String(q.s) === state.qs);
     });
     var html = list.map(function (q) {
       return '<article class="qcard' + (q.tag === '劝解' || q.tag === '人生' ? ' big' : '') + '">' +
