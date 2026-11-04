@@ -4,7 +4,7 @@
   var D = window.DATA;
   var app = document.getElementById('app');
 
-  var state = { q: '', hideEmpty: false, tag: '全部' };
+  var state = { q: '', hideEmpty: false, tag: '全部', qs: '全部' };
 
   /* ---------- utils ---------- */
   function esc(s) {
@@ -238,6 +238,16 @@
         esc(t) + '<span class="n">' + n + '</span></button>';
     }).join('');
 
+    var sess = D.sessions.filter(function (s) {
+      return D.quotes.some(function (q) { return q.s === s.id; });
+    }).reverse();
+    var schips = '<button class="chip' + (state.qs === '全部' ? ' on' : '') + '" data-s="all">全部<span class="n">' + D.quotes.length + '</span></button>' +
+      sess.map(function (s) {
+        var n = D.quotes.filter(function (q) { return q.s === s.id; }).length;
+        return '<button class="chip' + (state.qs === s.id ? ' on' : '') + '" data-s="' + esc(s.id) + '">' +
+          esc(s.date.replace('-', '.')) + '<span class="n">' + n + '</span></button>';
+      }).join('');
+
     app.innerHTML =
       '<section class="hero" style="padding-bottom:30px">' +
         '<div class="kicker">TRANSCRIPT EXCERPTS</div>' +
@@ -247,14 +257,24 @@
         '文本以语音识别稿为基础，只做断句、明显错字与语序错乱的校正，不做润色；原始记录见对应场次的逐字稿。</p>' +
       '</section>' +
       '<div class="filters" id="filters">' + chips + '</div>' +
+      '<div class="filters" id="sfilters"><span class="flabel">场次</span>' + schips + '</div>' +
       '<div class="qgrid" id="qlist"></div>';
 
     document.getElementById('filters').addEventListener('click', function (e) {
       var b = e.target.closest('.chip');
       if (!b) return;
       state.tag = b.getAttribute('data-tag');
-      document.querySelectorAll('.chip').forEach(function (c) {
+      document.querySelectorAll('#filters .chip').forEach(function (c) {
         c.classList.toggle('on', c.getAttribute('data-tag') === state.tag);
+      });
+      renderQuoteList();
+    });
+    document.getElementById('sfilters').addEventListener('click', function (e) {
+      var b = e.target.closest('.chip');
+      if (!b) return;
+      state.qs = b.getAttribute('data-s');
+      document.querySelectorAll('#sfilters .chip').forEach(function (c) {
+        c.classList.toggle('on', c.getAttribute('data-s') === state.qs);
       });
       renderQuoteList();
     });
@@ -263,7 +283,10 @@
   }
 
   function renderQuoteList() {
-    var list = D.quotes.filter(function (q) { return state.tag === '全部' || q.tag === state.tag; });
+    var list = D.quotes.filter(function (q) {
+      return (state.tag === '全部' || q.tag === state.tag) &&
+             (state.qs === '全部' || q.s === state.qs);
+    });
     var html = list.map(function (q) {
       return '<article class="qcard' + (q.tag === '劝解' || q.tag === '人生' ? ' big' : '') + '">' +
         '<span class="tag">' + esc(q.tag) + '</span>' +
@@ -276,7 +299,7 @@
         '</div>' +
       '</article>';
     }).join('');
-    document.getElementById('qlist').innerHTML = html || '<div class="empty">这个标签下还没有摘录。</div>';
+    document.getElementById('qlist').innerHTML = html || '<div class="empty">这个筛选组合下还没有摘录。</div>';
   }
 
   app.addEventListener('click', function (e) {
