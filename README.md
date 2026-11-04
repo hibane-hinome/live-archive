@@ -27,11 +27,11 @@ tools/
 
 ## 日常用法
 
-**默认不需要做任何事，但推送需要你确认。** 直播结束后由 Windows 计划任务 `live-archive publish`
-自动完成：每小时的第 20 分检查一次数据库，有新内容就导出、构建并**提交到本地**（review 模式，
-不上传）。你确认内容没问题后，再运行 `publish.cmd --push` 推送，随后 GitHub Actions 自动发布。
+**没有定时任务，直播结束后手动跑一次。**（原先有一个每小时 :20 的 Windows 计划任务，因为每次都会
+弹出控制台窗口，已移除。）流程是：导出 → 构建 → **提交到本地**（review 模式，不上传）；
+你确认内容没问题后，再运行 `publish.cmd --push` 推送，随后 GitHub Actions 自动发布。
 
-手动入口：
+入口：
 
 ```bat
 publish.cmd                :: 导出 + 构建 + 本地提交（不推送，等 review）
@@ -52,7 +52,7 @@ python tools/publish.py --push             # 同上，但提交后推送
 
 `publish.py` 的判断顺序：最后一条记录静默不足 `quiet_min`（默认 10 分钟）就认为还在直播，直接退出；
 导出后数据无变化则不提交；**默认不推送**——本地提交后由人工 review，确认后用 `--push` 推送
-（或在 `config.toml` 里把 `[publish] auto_push` 改为 `true` 恢复全自动）。
+（或在 `config.toml` 里把 `[publish] auto_push` 改为 `true`，让脚本自己推送）。
 所有动作记录在 `.state/publish.log`。
 
 发布后约 40 秒生效。看到新内容再刷新页面，若仍是旧数据，多半是浏览器缓存——
