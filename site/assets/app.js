@@ -4,7 +4,10 @@
   var D = window.DATA;
   var app = document.getElementById('app');
 
-  var state = { q: '', hideEmpty: false, tag: '全部', qs: '全部' };
+  var state = { q: '', hideEmpty: false, tag: '全部', qs: '全部', qShown: 0, dpage: 1, spage: 1 };
+  var QBATCH = 12;   // 摘录每次渲染的条数
+  var DPAGE = 4;     // 日记每页篇数
+  var SPAGE = 6;     // 首页「全部场次」每页场数
 
   /* ---------- utils ---------- */
   function esc(s) {
@@ -17,6 +20,38 @@
   function tcolor(i) { return D.topics[i] ? D.topics[i][1] : '#4a4f5e'; }
   function sess(id) { return D.sessions[id]; }
   function dateLabel(s) { return s.date.replace('-', '.') + ' ' + s.week; }
+
+  // 页码条：第 n 页 / 共 m 页 · 共 total 条
+  function pagerHTML(page, pages, total, unit) {
+    if (pages <= 1) return '';
+    var nums = [];
+    for (var i = 1; i <= pages; i++) {
+      nums.push('<button data-p="' + i + '"' + (i === page ? ' class="on"' : '') + '>' + i + '</button>');
+    }
+    return '<div class="pager">' +
+      '<button data-p="' + (page - 1) + '"' + (page === 1 ? ' disabled' : '') + '>← 上一页</button>' +
+      nums.join('') +
+      '<button data-p="' + (page + 1) + '"' + (page === pages ? ' disabled' : '') + '>下一页 →</button>' +
+      '<span class="pinfo">第 ' + page + ' / ' + pages + ' 页 · 共 ' + total + ' ' + unit + '</span>' +
+    '</div>';
+  }
+
+  // 绑定翻页后回到锚点，避免重新渲染把用户甩回页顶
+  function bindPager(onPick, anchorId) {
+    var pager = app.querySelector('.pager');
+    if (!pager) return;
+    pager.addEventListener('click', function (e) {
+      var b = e.target.closest('button');
+      if (!b || b.disabled) return;
+      var n = parseInt(b.getAttribute('data-p'), 10);
+      if (!n) return;
+      onPick(n);
+      var el = document.getElementById(anchorId);
+      if (!el) return;
+      var y = el.getBoundingClientRect().top + window.pageYOffset - 110;
+      window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+    });
+  }
 
   function mark(text, q) {
     var safe = esc(text);
@@ -81,6 +116,12 @@
     var maxT = topicCount[topicRank[0]];
     var latestDiary = (D.diary && D.diary.length) ? D.diary[0] : null;
 
+    // 全部场次（新的在前）按每页 SPAGE 场分页
+    var allSessions = D.sessions.slice().reverse();
+    var spages = Math.max(1, Math.ceil(allSessions.length / SPAGE));
+    if (state.spage < 1 || state.spage > spages) state.spage = 1;
+    var sfrom = (state.spage - 1) * SPAGE;
+
     var bars = topicRank.slice(0, 12).map(function (k) {
       var i = parseInt(k, 10);
       // 平方根刻度：最多与最少相差近百倍，线性刻度会让除首项外的柱子几乎不可见
@@ -120,11 +161,11 @@
         '</div>' +
         '<div class="notice">' +
           '<h4>这是机器翻译，不是人工同传</h4>' +
-          '<p>这里的每一条译文，都由本机运行的小型模型（Qwen3.5-4B）在直播当时逐条自动生成，' +
-          '没有人工同传参与，也不涉及任何付费翻译服务，从头到尾没有人校对过。' +
+          '<p>这里的每一条译文，都由本机运行的小型模型在直播当时逐条自动生成，没有人工同传参与，' +
+          '也不涉及任何付费翻译服务，从头到尾没有人校对过。' +
           '机器确实会错：抽检 80 条，15 条意思明显偏差，个别译反，半句和专名最容易错。' +
           '<b>日记与摘录经人工核对，可作引用；逐字稿只作索引，要确认她到底说了什么，请以原直播为准。</b>' +
-          ' <a href="#/about">技术说明与误差来源 →</a></p>' +
+          ' <a href="#/about">数据来源与免责声明 →</a></p>' +
         '</div>' +
       '</section>' +
 
@@ -157,10 +198,13 @@
         '<div class="tbars">' + bars + '</div>' +
       '</section>' +
 
-      '<section class="sec">' +
+      '<section class="sec" id="allSessions">' +
         '<div class="sec-head"><h2><i>04</i>全部场次</h2><a class="more" href="#/archive">档案库 →</a></div>' +
-        '<div class="qgrid">' + D.sessions.slice().reverse().map(sessionCard).join('') + '</div>' +
+        '<div class="sgrid">' + allSessions.slice(sfrom, sfrom + SPAGE).map(sessionCard).join('') + '</div>' +
+        pagerHTML(state.spage, spages, allSessions.length, '场') +
       '</section>';
+
+    bindPager(function (n) { state.spage = n; renderHome(); }, 'allSessions');
 
     document.getElementById('footMeta').textContent = '更新于 ' + D.meta.generated;
   }
@@ -183,31 +227,45 @@
 
   function renderDiary() {
     var list = D.diary || [];
-    var html = list.map(function (d) {
-      var qn = D.quotes.filter(function (q) { return q.s === d.s; }).length;
-      return '<article class="dentry">' +
-        '<div class="dhead">' +
-          '<div class="ddate">' + esc(d.dateLong) + ' <em>' + esc(d.week) + '</em></div>' +
-          '<div class="dinfo">' + esc(d.start) + ' – ' + esc(d.end) + ' · ' + d.dur + ' 分钟 · ' + d.count + ' 条记录' +
-            (qn ? ' · ' + qn + ' 段摘录' : '') + '</div>' +
-        '</div>' +
-        '<h3 class="dtitle">' + esc(d.title) + '</h3>' +
-        (d.tagline ? '<div class="dtag">' + esc(d.tagline) + '</div>' : '') +
-        '<div class="dbody">' + d.body.map(function (p) { return '<p>' + esc(p) + '</p>'; }).join('') + '</div>' +
-        '<div class="dlinks"><a href="#/archive/' + d.s + '">看这一场的逐字稿 →</a></div>' +
-      '</article>';
-    }).join('');
+    var pages = Math.max(1, Math.ceil(list.length / DPAGE));
+    if (state.dpage < 1 || state.dpage > pages) state.dpage = 1;
+    var from = (state.dpage - 1) * DPAGE;
+    var cur = list.slice(from, from + DPAGE);
+
+    var html = cur.map(diaryEntry).join('');
+    var btns = pagerHTML(state.dpage, pages, list.length, '篇');
 
     app.innerHTML =
-      '<section class="hero" style="padding-bottom:26px">' +
-        '<div class="kicker">STREAM DIARY</div>' +
-        '<h1 style="font-size:clamp(38px,5.4vw,64px)">今日<span class="thin">，</span>播了<span class="accent">什么</span></h1>' +
-        '<p class="lead">每场直播后整理的记录摘要：聊了什么、回应了谁、讲了哪些冷知识。' +
-        '只做事实性归纳，不做评价；日记之外随时可以点进对应场次的逐字稿核对原文。当前共 ' +
-        list.length + ' 篇。</p>' +
+      '<section class="hero hero-sm">' +
+        '<div class="hero-copy">' +
+          '<div class="kicker">STREAM DIARY</div>' +
+          '<h1>今日<span class="thin">，</span>播了<span class="accent">什么</span></h1>' +
+          '<p class="lead">每场直播后整理的记录摘要：聊了什么、回应了谁、讲了哪些冷知识。' +
+          '只做事实性归纳，不做评价；日记之外随时可以点进对应场次的逐字稿核对原文。当前共 ' +
+          list.length + ' 篇。</p>' +
+        '</div>' +
       '</section>' +
-      '<div class="dlist">' + (html || '<div class="empty">还没有日记。</div>') + '</div>';
+      '<div class="dlist" id="dlist">' + (html || '<div class="empty">还没有日记。</div>') + '</div>' +
+      btns;
+
+    bindPager(function (n) { state.dpage = n; renderDiary(); }, 'dlist');
+
     document.getElementById('footMeta').textContent = '更新于 ' + D.meta.generated;
+  }
+
+  function diaryEntry(d) {
+    var qn = D.quotes.filter(function (q) { return q.s === d.s; }).length;
+    return '<article class="dentry">' +
+      '<div class="dhead">' +
+        '<div class="ddate">' + esc(d.dateLong) + ' <em>' + esc(d.week) + '</em></div>' +
+        '<div class="dinfo">' + esc(d.start) + ' – ' + esc(d.end) + ' · ' + d.dur + ' 分钟 · ' + d.count + ' 条记录' +
+          (qn ? ' · ' + qn + ' 段摘录' : '') + '</div>' +
+      '</div>' +
+      '<h3 class="dtitle">' + esc(d.title) + '</h3>' +
+      (d.tagline ? '<div class="dtag">' + esc(d.tagline) + '</div>' : '') +
+      '<div class="dbody">' + d.body.map(function (p) { return '<p>' + esc(p) + '</p>'; }).join('') + '</div>' +
+      '<div class="dlinks"><a href="#/archive/' + d.s + '">看这一场的逐字稿 →</a></div>' +
+    '</article>';
   }
 
   function sessionCard(s) {
@@ -249,16 +307,19 @@
       }).join('');
 
     app.innerHTML =
-      '<section class="hero" style="padding-bottom:30px">' +
-        '<div class="kicker">TRANSCRIPT EXCERPTS</div>' +
-        '<h1 style="font-size:clamp(38px,5.4vw,64px)">摘录<span class="thin">，</span><span class="accent">' + D.meta.quoteCount + '</span> 段</h1>' +
-        '<p class="lead">从 ' + num(D.meta.total) + ' 条记录中选出 ' + D.meta.quoteCount + ' 段，按话题分类。' +
-        '每段都保留引出它的那句话或那件事，脱离上下文不容易读懂的，宁可长一点也不截断。' +
-        '文本以语音识别稿为基础，只做断句、明显错字与语序错乱的校正，不做润色；原始记录见对应场次的逐字稿。</p>' +
+      '<section class="hero hero-sm">' +
+        '<div class="hero-copy">' +
+          '<div class="kicker">TRANSCRIPT EXCERPTS</div>' +
+          '<h1>摘录<span class="thin">，</span><span class="accent">' + D.meta.quoteCount + '</span> 段</h1>' +
+          '<p class="lead">从 ' + num(D.meta.total) + ' 条记录中选出 ' + D.meta.quoteCount + ' 段，按话题分类。' +
+          '每段都保留引出它的那句话或那件事，脱离上下文不容易读懂的，宁可长一点也不截断。' +
+          '文本以语音识别稿为基础，只做断句、明显错字与语序错乱的校正，不做润色；原始记录见对应场次的逐字稿。</p>' +
+        '</div>' +
       '</section>' +
       '<div class="filters" id="filters">' + chips + '</div>' +
       '<div class="filters" id="sfilters"><span class="flabel">场次</span>' + schips + '</div>' +
-      '<div class="qgrid" id="qlist"></div>';
+      '<div class="qgrid" id="qlist"></div>' +
+      '<div class="qmore" id="qmore"></div>';
 
     document.getElementById('filters').addEventListener('click', function (e) {
       var b = e.target.closest('.chip');
@@ -267,7 +328,7 @@
       document.querySelectorAll('#filters .chip').forEach(function (c) {
         c.classList.toggle('on', c.getAttribute('data-tag') === state.tag);
       });
-      renderQuoteList();
+      renderQuoteList(true);
     });
     document.getElementById('sfilters').addEventListener('click', function (e) {
       var b = e.target.closest('.chip');
@@ -276,30 +337,50 @@
       document.querySelectorAll('#sfilters .chip').forEach(function (c) {
         c.classList.toggle('on', c.getAttribute('data-s') === state.qs);
       });
-      renderQuoteList();
+      renderQuoteList(true);
     });
-    renderQuoteList();
+    renderQuoteList(true);
     document.getElementById('footMeta').textContent = '更新于 ' + D.meta.generated;
   }
 
-  function renderQuoteList() {
+  function quoteCard(q) {
+    return '<article class="qcard' + (q.tag === '劝解' || q.tag === '人生' ? ' big' : '') + '">' +
+      '<span class="tag">' + esc(q.tag) + '</span>' +
+      '<p class="jp">' + esc(q.jp) + '</p>' +
+      '<p class="zh">' + esc(q.zh) + '</p>' +
+      (q.note ? '<p class="note">' + esc(q.note) + '</p>' : '') +
+      '<div class="meta">' +
+        '<a href="#/archive/' + q.s + '?t=' + encodeURIComponent(q.t) + '">' + esc(q.date.replace('-', '.')) + ' ' + esc(q.t) + ' →</a>' +
+        '<button class="copy" data-id="' + q.id + '">复制</button>' +
+      '</div>' +
+    '</article>';
+  }
+
+  // reset=true 时回到第一批：切换筛选后从顶部重新铺，避免停在一个空的批次上
+  function renderQuoteList(reset) {
+    if (reset) state.qShown = QBATCH;
     var list = D.quotes.filter(function (q) {
       return (state.tag === '全部' || q.tag === state.tag) &&
              (state.qs === '全部' || String(q.s) === state.qs);
     });
-    var html = list.map(function (q) {
-      return '<article class="qcard' + (q.tag === '劝解' || q.tag === '人生' ? ' big' : '') + '">' +
-        '<span class="tag">' + esc(q.tag) + '</span>' +
-        '<p class="jp">' + esc(q.jp) + '</p>' +
-        '<p class="zh">' + esc(q.zh) + '</p>' +
-        (q.note ? '<p class="note">' + esc(q.note) + '</p>' : '') +
-        '<div class="meta">' +
-          '<a href="#/archive/' + q.s + '?t=' + encodeURIComponent(q.t) + '">' + esc(q.date.replace('-', '.')) + ' ' + esc(q.t) + ' →</a>' +
-          '<button class="copy" data-id="' + q.id + '">复制</button>' +
-        '</div>' +
-      '</article>';
-    }).join('');
-    document.getElementById('qlist').innerHTML = html || '<div class="empty">这个筛选组合下还没有摘录。</div>';
+    var shown = list.slice(0, state.qShown);
+    var box = document.getElementById('qlist');
+    var more = document.getElementById('qmore');
+    if (!box || !more) return;
+
+    box.innerHTML = shown.map(quoteCard).join('') ||
+      '<div class="empty">这个筛选组合下还没有摘录。</div>';
+
+    if (list.length > state.qShown) {
+      more.innerHTML = '<button class="morebtn" id="qloadmore">加载更多 ↓</button>' +
+        '<span class="mhint">已显示 ' + shown.length + ' / ' + list.length + ' 段</span>';
+      document.getElementById('qloadmore').addEventListener('click', function () {
+        state.qShown += QBATCH;
+        renderQuoteList(false);
+      });
+    } else {
+      more.innerHTML = list.length ? '<span class="mhint">已全部显示 · 共 ' + list.length + ' 段</span>' : '';
+    }
   }
 
   app.addEventListener('click', function (e) {
@@ -482,49 +563,44 @@
 
   /* ---------- about ---------- */
   function renderAbout() {
+    var diaryN = D.meta.diaryCount || (D.diary ? D.diary.length : 0);
     app.innerHTML =
       '<section class="about">' +
         '<div class="kicker">ABOUT THIS ARCHIVE</div>' +
-        '<h2>关于这份档案</h2>' +
-        '<p>这里收录的是 <b>' + esc(D.meta.streamer) + '</b> 在 B 站直播时的中日对照记录，' +
-        '时间范围 <b>' + D.meta.firstDate + ' — ' + D.meta.lastDate + '</b>，共 <b>' + D.meta.sessionCount +
-        ' 场、' + num(D.meta.total) + ' 条</b>。每条都是一句日语原文配一句中文译文，按出现时间排列；' +
-        '页面上的逐字稿就是这些记录本身，没有再做过编辑。</p>' +
-        '<div class="box"><h3>记录是怎么来的</h3>' +
-          '<p><b>语音识别</b>：用 Windows 11 系统自带的「实时辅助字幕」（Live Captions）把直播里的日语语音转成文字。' +
-          '识别在本机完成，音频不上传；需要事先在系统设置里装好日语语音包。</p>' +
-          '<p><b>抓取字幕</b>：用开源工具 LiveCaptions-Translator 从字幕窗口逐条读出文本，' +
-          '读到的每条再送去翻译。字幕是流式出现的，同一句话常被拆成两三段陆续到达，这也是逐字稿里句子偏短的原因。</p>' +
-          '<p><b>翻译</b>：本地运行的大语言模型 <b>Qwen3.5-4B</b>（通义千问 3.5 的 40 亿参数版本），' +
-          '用 LM Studio 在本机加载，通过 OpenAI 兼容接口调用，温度为 0.3。' +
-          '每次送给模型的是「前面 5 条原文 + 当前这一条」，要求只输出一行中文译文，不解释、不补全。' +
-          '翻译同样在本机完成，全程没有调用云端服务，也不产生费用。</p>' +
-          '<p><b>整理</b>：直播结束后按时间把记录切成场次，去掉测试跑和录播片段，只保留完整直播。</p>' +
+        '<h2>关于<span class="accent">这份档案</span></h2>' +
+        '<p class="about-lead">把 <b>' + esc(D.meta.streamer) + '</b> 直播里的日语语音自动转成文字，' +
+          '再由本机小模型逐条译成中文，按场次整理成可检索的对照记录。</p>' +
+        '<div class="facts">' +
+          '<div><b>' + D.meta.sessionCount + '</b><span>场直播</span></div>' +
+          '<div><b>' + num(D.meta.total) + '</b><span>条记录</span></div>' +
+          '<div><b>' + D.meta.quoteCount + '</b><span>段摘录</span></div>' +
+          '<div><b>' + diaryN + '</b><span>篇日记</span></div>' +
+          '<div class="range">' + D.meta.firstDate + ' — ' + D.meta.lastDate + '</div>' +
         '</div>' +
-        '<div class="box"><h3>这份记录的误差在哪</h3>' +
-          '<p><b>识别会错</b>：人名、作品名、生词和网络梗最容易错，同一个词还可能在几秒内被识别成两种写法；' +
-          '唱歌、多人同时说话、音效盖过人声的段落基本不可用。' +
-          '常出现的几个错误已经用术语表兜住了（「ビリビリ」= B站、「スパチャ」= SC），但表外的照样会漏。</p>' +
-          '<p><b>翻译会错</b>：字幕经常在半句时就送出去，这时模型只能按不完整的意思翻；' +
-          '提供的上文只有 5 条，话题一岔开就接不上。所以译文偶有主语错位、把反问翻成陈述、把专有名词意译掉的情况。</p>' +
-          '<p><b>时间会偏</b>：时间戳是字幕出现的时刻，不是她开口的时刻，通常晚几秒；' +
-          '跨场的收尾也未必精确到最后一句。</p>' +
-          '<p><b>实测的出错率</b>：随机抽取 80 条逐条核对，15 条意思明显偏差（约五分之一），其中 3 条整条没译出来。' +
-          '错得最多的是三类：半句被硬翻、人名与作品名、缩略语——「スパチャ」曾被译成「体育」「超级聊天」，' +
-          '「ビリビリ」被译成「电击」。反过来，有明确主谓的完整长句基本都读得通，' +
-          '所以这份记录的问题不在「整体不可用」，而在「碎片段基本不可信」。</p>' +
-          '<p>换句话说：<b>逐字稿是机器记录，可以当索引和检索用，不适合当引文</b>；' +
-          '要判断她到底说了什么，去听原直播的那一段。</p></div>' +
-        '<div class="box"><h3>人工做了哪些整理</h3>' +
-          '<p>只有两处：一是每场直播结束后的<b>日记</b>，写的是这场聊了什么、回应了谁、讲了哪些冷知识，' +
-          '属于事实性归纳，不做评价；二是<b>摘录</b>，从逐字稿里挑出成段的话，连同引出它的那句观众发言一起保留，' +
-          '只做断句、明显错字与语序的校正，不做润色，也不对说话人作评价——判断留给读者。</p>' +
-          '<p>逐字稿本身保留了识别原文，所以同一条内容在摘录里和在逐字稿里可能略有差异。</p></div>' +
-        '<div class="box"><h3>数据概览</h3>' +
-          '<p>' + D.sessions.map(function (s) {
-            return '<a href="#/archive/' + s.id + '" style="color:var(--ink-2);border-bottom:1px solid var(--line)">' +
-              esc(s.date.replace('-', '.')) + '（' + s.count + ' 条）</a>';
-          }).join('　') + '</p></div>' +
+
+        '<div class="box"><h3>数据是怎么来的</h3>' +
+          '<ol class="steps">' +
+            '<li><b>语音识别</b>　用 Windows 11 自带的实时辅助字幕（Live Captions）把直播语音转成日语文本。' +
+              '识别在本机完成，音频不上传，只需要事先装好日语语音包。</li>' +
+            '<li><b>抓取字幕</b>　用开源工具 LiveCaptions-Translator 从字幕窗口逐条读出文本，再交给翻译。' +
+              '字幕是流式出现的，一句话常被拆成几段陆续到达，所以记录里的句子偏短。</li>' +
+            '<li><b>机器翻译</b>　本机运行的小模型逐条翻译，温度为 0.3，每次只附带前面 5 条原文作为上文，' +
+              '要求只输出一行中文。10 月 23 日至 11 月 5 日用 <code>Qwen3.5-4B</code>（LM Studio 加载），' +
+              '11 月 6 日起改用 <code>hunyuan-mt-chimera-7B</code>（LiveTranslate）。' +
+              '翻译全程在本机完成，没有调用云端服务，也不产生费用。</li>' +
+            '<li><b>切分场次</b>　直播结束后按时间把记录切成场次，去掉测试跑与录播片段。</li>' +
+            '<li><b>人工部分</b>　每场的<b>日记</b>与<b>摘录</b>为人工整理；逐字稿保留机器原始记录，不做修改。' +
+              '两者措辞可能因此略有差异，以逐字稿为准。</li>' +
+          '</ol>' +
+        '</div>' +
+
+        '<div class="box warn"><h3>免责声明</h3>' +
+          '<p>本站是个人维护的非官方记录，与主播本人、B 站官方均无关；直播内容的著作权归主播所有。</p>' +
+          '<p><b>逐字稿是机器记录，不是可靠引文。</b>识别与翻译都未逐条校对，错误常见——曾抽检 80 条，15 条意思明显偏差，' +
+            '半句、人名作品名、缩略语最容易出错。它适合当检索索引，引用前请回原直播核对。</p>' +
+          '<p>日记与摘录经人工核对，但仍是二次整理，也可能存在理解偏差；本站只做事实性归纳，不对直播内容作评价。</p>' +
+          '<p>若主播或相关权利人要求，可随时删除相应内容。</p>' +
+        '</div>' +
       '</section>';
     document.getElementById('footMeta').textContent = '更新于 ' + D.meta.generated;
   }
