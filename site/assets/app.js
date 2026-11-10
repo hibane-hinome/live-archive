@@ -806,6 +806,14 @@
           '<div class="range">' + D.meta.firstDate + ' — ' + D.meta.lastDate + '</div>' +
         '</div>' +
 
+        '<div class="box"><h3>主播与直播</h3>' +
+          '<p>主播 <b>' + esc(D.meta.streamer) + '</b>　B 站主页：' +
+            '<a href="https://space.bilibili.com/2094031249" target="_blank" rel="noopener">space.bilibili.com/2094031249</a></p>' +
+          '<p>直播间：' +
+            '<a href="https://live.bilibili.com/22748536" target="_blank" rel="noopener">live.bilibili.com/22748536</a></p>' +
+          '<p>这里的一切都来自上面那个直播间；想看现场、想核对某一条记录，去那边。</p>' +
+        '</div>' +
+
         '<div class="box"><h3>数据是怎么来的</h3>' +
           '<ol class="steps">' +
             '<li><b>语音识别</b>　用 Windows 11 自带的实时辅助字幕（Live Captions）把直播语音转成日语文本。' +
