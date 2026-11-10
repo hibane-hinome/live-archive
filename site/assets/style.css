@@ -204,6 +204,34 @@ main{position:relative;z-index:2;max-width:1240px;margin:0 auto;padding:0 40px 9
 .btn.primary{background:linear-gradient(140deg,var(--fire-soft),var(--fire));color:#1c0d06;border-color:transparent;font-weight:600}
 .btn.primary:hover{box-shadow:0 10px 30px -12px rgba(255,122,69,.9)}
 
+/* 主播入口：首屏就给到直播间与 B 站主页，别让人去关于页里翻。
+   直播间用实心（当前可去的地方），主页用描边，两个都带完整 URL。 */
+.hero-links{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:16px}
+.hero-links .hl-tag{font-size:11px;letter-spacing:.2em;color:var(--dim);margin-right:2px}
+a.hl{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:9px 16px;border-radius:12px;font-size:12px;letter-spacing:.04em;
+  border:1px solid var(--line);color:var(--dim);transition:.2s;
+}
+a.hl b{font-family:var(--mono);font-size:11.5px;font-weight:400;letter-spacing:.02em;color:var(--ink-2)}
+a.hl:hover{border-color:rgba(255,122,69,.55);background:rgba(255,122,69,.08);transform:translateY(-1px)}
+a.hl.live{
+  background:linear-gradient(140deg,var(--fire-soft),var(--fire));
+  border-color:transparent;color:#1c0d06;font-weight:600;
+}
+a.hl.live b{color:#1c0d06;font-weight:600}
+a.hl.live:hover{box-shadow:0 10px 30px -12px rgba(255,122,69,.9);transform:translateY(-1px)}
+a.hl .live-dot{
+  width:6px;height:6px;border-radius:50%;background:#1c0d06;
+  box-shadow:0 0 0 3px rgba(28,13,6,.16);
+}
+@media(max-width:520px){
+  a.hl{padding:8px 13px}
+  a.hl b{font-size:11px}
+  /* 窄屏放不下标签，两个胶囊自己会占满一行，不必再占位 */
+  .hero-links .hl-tag{display:none}
+}
+
 /* ---------- 大引言：隔一段打一次节奏，别让整页都是等宽卡片 ---------- */
 .pull{
   margin:0;padding:42px 0 38px 26px;position:relative;

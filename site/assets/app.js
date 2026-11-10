@@ -266,6 +266,14 @@
             '<a class="btn primary" href="#/quotes">读摘录 →</a>' +
             '<a class="btn" href="#/archive">进档案库</a>' +
           '</div>' +
+          // 主播入口放在首屏：想看现场、想核对记录，从这里直接出去
+          '<div class="hero-links">' +
+            '<span class="hl-tag">主播在 B 站</span>' +
+            '<a class="hl live" href="https://live.bilibili.com/22748536" target="_blank" rel="noopener">' +
+              '<i class="live-dot" aria-hidden="true"></i>直播间 <b>live.bilibili.com/22748536</b></a>' +
+            '<a class="hl" href="https://space.bilibili.com/2094031249" target="_blank" rel="noopener">' +
+              '主页 <b>space.bilibili.com/2094031249</b></a>' +
+          '</div>' +
         '</div>' +
         '<aside class="hero-side rv" id="topicSide">' +
           '<div class="hs-head"><b>话题分布</b><em>' + D.topics.length + ' 类</em></div>' +
