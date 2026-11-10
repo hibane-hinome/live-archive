@@ -332,9 +332,20 @@ s.backup(d)
 
 `.data/` 里不要再堆 `.bak_*`（会越积越大），备份一律走上面那条盘外路径，文件名带日期。
 
-### 4. `danmaku-it` 没有版本控制
+### 4. `danmaku-it` 已有版本控制（2026-11-10 起）
 
-整个目录（含 1766 行的 `gui.py`、`protocol.py`）不在 git 里，`.bak_noreport/` 是唯一的历史残留（还带着已移除的 `moderation.py`）。改动前先手动备份，或者 `git init`。
+首次提交 `d1b4a01`，16 个文件 / 4044 行（`gui.py` 1766 行、`collector.py` 487 行等）。仓库**没有 remote**，只是本地版本管理。
+
+`.gitignore` 刻意挡掉四类东西，提交前别用 `git add -f` 绕过：
+
+| 排除项 | 原因 |
+|---|---|
+| `account.csv` | Netscape 格式的 B 站 cookie，19 行含登录态，泄露等于账号被接管 |
+| `config.json` | 含 `sessdata` / `dede_user_id` / cookie 绝对路径 / 窗口坐标 |
+| `.venv/` | 237 MB |
+| `data/`、`logs/`、`exports/` | 数据库不可再生，走盘外备份；后两者是运行时产物 |
+
+副作用：`config.json` 不入库，clone 下来跑不起来，得照 README 复制一份并填路径。
 
 ### 5. 白天场已由时间窗挡掉（2026-11-10 已修）
 
@@ -409,6 +420,6 @@ time_window_keep = ["2026-11-02_1815"]
 - [x] 那 8 条只存在于 JSON 里的回填译文 —— 2026-11-10 已写回数据库
 - [x] `.data/` 备份 —— 2026-11-10 起走 `D:/MyDocument/live-archive-backup/`
 - [ ] `.data/` 要不要纳入 git（8.9 MB，单文件在 100 MB 以内可以；或继续用盘外备份 + 本文件记录路径）
-- [ ] `danmaku-it` 要不要 `git init`
+- [x] `danmaku-it` 要不要 `git init` —— 2026-11-10 已 init 并首次提交 `d1b4a01`（无 remote，凭证与 config 已挡在 .gitignore 外）
 - [ ] `live-archive-daily` skill 里的库路径要不要同步改掉
 - [ ] 项目搬迁后，`config.toml` 的 `db` 目前是绝对路径 `D:/HibaneHinome/...`；若以后还会移动，考虑改成相对路径 `../.data/translation_history.db`（`load_config` 会按仓库根解析相对路径）
