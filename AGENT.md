@@ -216,7 +216,7 @@ cd D:/HibaneHinome/danmaku-it
 - 匿名连接下**普通弹幕昵称会被 B站打码**（`青***`），SC 和进场事件是完整的
 - 断线期间 B站不补发 SC，重连补不齐
 
-`data/sc.db` 是老的独立采集库（21 条 SC），已被 `config.json` 改成直接写 `live-archive/.data/` 取代，别再往那边写。
+`danmaku-it/data/sc.db` 是老的自定义采集库，已被 `config.json` 改成直接写 `live-archive/.data/` 取代。**2026-11-10 已删除**，只剩盘外备份那一份（见第 9 节）——里面有 20 条 SC、1640 条弹幕来自 545068（德云色）等三个房间，`.data` 库从来没有过这些数据。
 
 ---
 
@@ -318,7 +318,8 @@ cd D:/HibaneHinome/LiveTranslate
 ```
 D:/MyDocument/live-archive-backup/
   translation_history_2026-11-10.db      枢纽库（9850 行，8.5 MB）
-  sc_collector_legacy_2026-11-10.db      老采集库 sc.db（21 条 SC）
+  sc_collector_legacy_2026-11-10.db      老采集库（21 条 SC / 1640 弹幕 / 3345 room_event）
+                                         ⚠️ 源文件 data/sc.db 已于 2026-11-10 删除，这是唯一副本
 ```
 
 备份用 SQLite 的 `backup()` API 而不是直接复制文件——WAL 模式下直接 copy 可能漏掉未 checkpoint 的数据：
