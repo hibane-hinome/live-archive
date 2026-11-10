@@ -267,12 +267,16 @@
             '<a class="btn" href="#/archive">进档案库</a>' +
           '</div>' +
           // 主播入口放在首屏：想看现场、想核对记录，从这里直接出去
+          // 直播间块用直播封面，主页块用主播头像，不再额外写一行说明
           '<div class="hero-links">' +
-            '<span class="hl-tag">主播在 B 站</span>' +
             '<a class="hl live" href="https://live.bilibili.com/22748536" target="_blank" rel="noopener">' +
-              '<i class="live-dot" aria-hidden="true"></i>直播间 <b>live.bilibili.com/22748536</b></a>' +
-            '<a class="hl" href="https://space.bilibili.com/2094031249" target="_blank" rel="noopener">' +
-              '主页 <b>space.bilibili.com/2094031249</b></a>' +
+              '<img class="thumb" src="brand/live-cover.jpg" alt="" width="64" height="36" decoding="async">' +
+              '<span class="hl-cap"><b>直播间</b><em>live.bilibili.com/22748536</em></span></a>' +
+            '<a class="hl" href="https://space.bilibili.com/2094031249" target="_blank" rel="noopener"' +
+              ' title="' + esc(D.meta.streamer) + ' · B 站主页">' +
+              '<img class="thumb round" src="brand/face.jpg" alt="' + esc(D.meta.streamer) + '"' +
+              ' width="36" height="36" decoding="async">' +
+              '<span class="hl-cap"><b>主页</b><em>space.bilibili.com/2094031249</em></span></a>' +
           '</div>' +
         '</div>' +
         '<aside class="hero-side rv" id="topicSide">' +

@@ -205,31 +205,39 @@ main{position:relative;z-index:2;max-width:1240px;margin:0 auto;padding:0 40px 9
 .btn.primary:hover{box-shadow:0 10px 30px -12px rgba(255,122,69,.9)}
 
 /* 主播入口：首屏就给到直播间与 B 站主页，别让人去关于页里翻。
-   直播间用实心（当前可去的地方），主页用描边，两个都带完整 URL。 */
-.hero-links{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:16px}
-.hero-links .hl-tag{font-size:11px;letter-spacing:.2em;color:var(--dim);margin-right:2px}
+   直播间块用直播封面（实心橙，当前可去的地方），主页块用圆形头像（描边），
+   两块都带完整 URL，结构一致。 */
+.hero-links{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px}
 a.hl{
-  display:inline-flex;align-items:center;gap:8px;
-  padding:9px 16px;border-radius:12px;font-size:12px;letter-spacing:.04em;
-  border:1px solid var(--line);color:var(--dim);transition:.2s;
+  display:inline-flex;align-items:center;gap:11px;
+  padding:5px 16px 5px 5px;border-radius:14px;
+  border:1px solid var(--line);transition:.2s;
 }
-a.hl b{font-family:var(--mono);font-size:11.5px;font-weight:400;letter-spacing:.02em;color:var(--ink-2)}
-a.hl:hover{border-color:rgba(255,122,69,.55);background:rgba(255,122,69,.08);transform:translateY(-1px)}
+a.hl .thumb{
+  display:block;width:64px;height:36px;flex:0 0 auto;
+  border-radius:9px;object-fit:cover;background:rgba(0,0,0,.25);
+}
+a.hl .thumb.round{width:36px;height:36px;border-radius:50%}
+a.hl .hl-cap{display:flex;flex-direction:column;gap:3px;line-height:1.15}
+a.hl .hl-cap b{font-size:12px;font-weight:600;letter-spacing:.08em;color:var(--ink-2)}
+a.hl .hl-cap em{
+  font-style:normal;font-family:var(--mono);font-size:11px;
+  letter-spacing:.01em;color:var(--dim-2);
+}
+a.hl:hover{border-color:rgba(255,122,69,.55);background:rgba(255,122,69,.07);transform:translateY(-1px)}
 a.hl.live{
   background:linear-gradient(140deg,var(--fire-soft),var(--fire));
-  border-color:transparent;color:#1c0d06;font-weight:600;
+  border-color:transparent;
 }
-a.hl.live b{color:#1c0d06;font-weight:600}
-a.hl.live:hover{box-shadow:0 10px 30px -12px rgba(255,122,69,.9);transform:translateY(-1px)}
-a.hl .live-dot{
-  width:6px;height:6px;border-radius:50%;background:#1c0d06;
-  box-shadow:0 0 0 3px rgba(28,13,6,.16);
-}
+a.hl.live .hl-cap b{color:#1c0d06}
+a.hl.live .hl-cap em{color:rgba(28,13,6,.72)}
+a.hl.live:hover{box-shadow:0 12px 30px -12px rgba(255,122,69,.9);transform:translateY(-1px)}
 @media(max-width:520px){
-  a.hl{padding:8px 13px}
-  a.hl b{font-size:11px}
-  /* 窄屏放不下标签，两个胶囊自己会占满一行，不必再占位 */
-  .hero-links .hl-tag{display:none}
+  a.hl{padding:4px 12px 4px 4px;gap:9px}
+  a.hl .thumb{width:52px;height:30px;border-radius:7px}
+  a.hl .thumb.round{width:30px;height:30px}
+  a.hl .hl-cap b{font-size:11px}
+  a.hl .hl-cap em{font-size:10px}
 }
 
 /* ---------- 大引言：隔一段打一次节奏，别让整页都是等宽卡片 ---------- */
