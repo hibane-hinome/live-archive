@@ -119,7 +119,7 @@ site/
 tools/
   common.py               配置、读库、切场、话题分类（TOPICS 关键词表）
   export.py               db → site/data/sessions/
-  build.py                site/ → dist/（含 data.js 与版本哈希）
+  build.py                site/ → dist/（含 data.js、版本哈希、构建时刻）
   publish.py              导出 → 构建 → commit（默认不 push）
 dist/                     构建产物，不入库，CI 重新生成
 .state/                   日志、截图、临时 dump、config_data.toml（gitignore）
@@ -136,7 +136,8 @@ python tools/export.py
 python tools/export.py --dry-run          # 先看会改什么，「清掉」必须是 0
 
 # 构建 / 本地预览
-python tools/build.py
+python tools/build.py                     # 页脚「更新于」= 本次构建时刻，自动写入，无需手改
+BUILD_TIME="2026.11.10 22:00" python tools/build.py   # 覆盖构建时刻（复现/调试用）
 python -m http.server 8799 -d dist        # 固定 8799
 
 # 发布（review 模式：只到本地提交）

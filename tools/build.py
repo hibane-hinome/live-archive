@@ -10,11 +10,27 @@ import json
 import os
 import shutil
 import sys
+from datetime import datetime, timedelta, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import common
 
 COPY = ['index.html', 'assets/app.js', 'assets/style.css', 'brand']
+
+# 构建时刻一律按北京时间算：CI 跑在 UTC，用本地时间会差 8 小时，页脚会看起来像没更新。
+BUILD_TZ = timezone(timedelta(hours=8))
+
+
+def build_stamp():
+    """这次构建的时刻，形如 2026.11.10 22:10。
+
+    每次构建自动生成，页面底部据此显示「更新于 …」，不需要手改，也不需要 git hook。
+    环境变量 BUILD_TIME 可以覆盖它，用于复现某次构建或本地调试。
+    """
+    raw = os.environ.get('BUILD_TIME', '').strip()
+    if raw:
+        return raw
+    return datetime.now(BUILD_TZ).strftime('%Y.%m.%d %H:%M')
 
 
 def inside(t, start, end):
@@ -116,8 +132,10 @@ def main():
             'sessionCount': len(sess_out),
             'firstDate': sess_out[0]['dateLong'],
             'lastDate': sess_out[-1]['dateLong'],
-            # 用最后一场的结束时间，保证同样的数据永远构建出同样的结果
+            # 最后一场的结束时间：数据截止到哪儿，仍然只由数据决定
             'generated': sess_out[-1]['dateLong'] + ' ' + sess_out[-1]['end'],
+            # 这次构建的时刻：由构建环境写入，同样的数据每次构建都会不同
+            'built': build_stamp(),
             'quoteCount': len(q_out),
             'diaryCount': len(diary_out),
         },
@@ -128,11 +146,19 @@ def main():
         'diary': diary_out,
     }
     js = 'window.DATA = ' + json.dumps(data, ensure_ascii=False, separators=(',', ':')) + ';\n'
-    # 版本号覆盖 data / app / style 三者：任一改动都会让浏览器重新取，避免发布后看到旧缓存
-    h = hashlib.sha256(js.encode('utf-8'))
+    # 版本号覆盖 data / app / style 三者：任一改动都会让浏览器重新取，避免发布后看到旧缓存。
+    # 构建时刻不计入哈希——它每次都不同，算进去会让版本号随每次构建变化，
+    # 而版本号要表达的是「内容变没变」。
+    hash_data = dict(data)
+    hash_data['meta'] = dict(data['meta'])
+    hash_data['meta']['built'] = ''
+    hash_js = 'window.DATA = ' + json.dumps(hash_data, ensure_ascii=False, separators=(',', ':')) + ';\n'
+    h = hashlib.sha256(hash_js.encode('utf-8'))
     for rel in ('assets/app.js', 'assets/style.css'):
-        with open(os.path.join(site_dir, rel), 'rb') as f:
-            h.update(f.read())
+        # 按 LF 归一化后再算：写出 dist 时就是 LF，若这里读原始字节，Windows 工作区
+        # 的 CRLF 会让本地与 CI 算出不同的版本号，就没法拿它核对线上是否已更新。
+        with open(os.path.join(site_dir, rel), encoding='utf-8') as f:
+            h.update(f.read().replace('\r\n', '\n').encode('utf-8'))
     ver = h.hexdigest()[:10]
 
     # ---- 输出 dist ----

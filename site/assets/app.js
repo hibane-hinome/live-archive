@@ -21,6 +21,18 @@
   function sess(id) { return D.sessions[id]; }
   function dateLabel(s) { return s.date.replace('-', '.') + ' ' + s.week; }
 
+  /* 页脚元信息：built 是这次构建的时刻（由 tools/build.py 写入），generated 是
+     数据截止到的那一场结束时间。两者都有就都显示——只写「更新于」容易让人以为
+     那一分钟刚开过播。 */
+  function setFoot() {
+    var m = D.meta;
+    var text = '更新于 ' + (m.built || m.generated);
+    if (m.built && m.generated && m.built !== m.generated) {
+      text += ' · 数据截至 ' + m.generated;
+    }
+    document.getElementById('footMeta').textContent = text;
+  }
+
   /* ---------- 进场：淡入与数字滚动 ---------- */
   var quiet = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var canObserve = typeof IntersectionObserver === 'function';
@@ -339,7 +351,7 @@
     if (!state.counted) { countUp(); state.counted = true; }
     playReveal();
 
-    document.getElementById('footMeta').textContent = '更新于 ' + D.meta.generated;
+    setFoot();
   }
 
   /* ---------- diary ---------- */
@@ -383,7 +395,7 @@
 
     bindPager(function (n) { state.dpage = n; renderDiary(); }, 'dlist');
 
-    document.getElementById('footMeta').textContent = '更新于 ' + D.meta.generated;
+    setFoot();
   }
 
   function diaryEntry(d) {
@@ -475,7 +487,7 @@
       renderQuoteList(true);
     });
     renderQuoteList(true);
-    document.getElementById('footMeta').textContent = '更新于 ' + D.meta.generated;
+    setFoot();
   }
 
   function quoteCard(q) {
@@ -733,7 +745,7 @@
         if (Math.abs(window.pageYOffset - y) > 120) jump(jumpT, false);
       }, { once: true });
     }
-    document.getElementById('footMeta').textContent = '更新于 ' + D.meta.generated;
+    setFoot();
   }
 
   function rowHTML(r, q, showSession) {
@@ -818,7 +830,7 @@
           '<p>若主播或相关权利人要求，可随时删除相应内容。</p>' +
         '</div>' +
       '</section>';
-    document.getElementById('footMeta').textContent = '更新于 ' + D.meta.generated;
+    setFoot();
   }
 
   route();
