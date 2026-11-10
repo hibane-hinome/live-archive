@@ -1,9 +1,12 @@
-# 数据源：指向本机 LiveCaptions-Translator 的数据库。换机器只改这一行。
+# 数据源：枢纽数据库（LiveTranslate 与 danmaku-it 都往这个文件写）。换机器只改这一行。
 [source]
 db = "D:/HibaneHinome/live-archive/.data/translation_history.db"
 session_gap_min = 30   # 相邻记录超过这个间隔就算新的一场
 min_records = 20       # 少于这个条数的片段当作误录，不进站点
 quiet_min = 10         # 最后一条记录静默超过这个分钟数，才认为直播已结束
+time_window = "23:30-01:30"  # 只收开场时间落在此窗口内的场次（跨零点），白天误录自动挡掉
+                             # 留空字符串 = 不过滤
+time_window_keep = ["2026-11-02_1815"]  # 例外保留：傍晚开播的正式场次，按场次名登记
 
 [site]
 dir = "site"           # 前端源码 + 数据

@@ -28,6 +28,13 @@ def main():
         return 0
 
     sessions = common.split_sessions(rows, cfg['source']['session_gap_min'], cfg['source']['min_records'])
+    sessions, dropped = common.filter_sessions(
+        sessions, cfg['source'].get('time_window', ''),
+        cfg['source'].get('time_window_keep') or [])
+    for s in dropped:
+        print('  跳过 %s （不在时间窗 %s 内）'
+              % (datetime.fromtimestamp(s['start']).strftime('%Y-%m-%d_%H%M'),
+                 cfg['source']['time_window']))
     out_dir = os.path.join(cfg['site']['dir'], 'data', 'sessions')
 
     written, unchanged, kept = [], [], set()

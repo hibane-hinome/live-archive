@@ -41,6 +41,8 @@ DEFAULTS = {
         'session_gap_min': 30,
         'min_records': 20,
         'quiet_min': 10,
+        'time_window': '',
+        'time_window_keep': [],
     },
     'site': {'dir': 'site', 'dist': 'dist'},
     'publish': {'remote': 'origin', 'branch': 'main'},
@@ -113,6 +115,45 @@ def split_sessions(rows, gap_min=30, min_records=20):
     if cur:
         out.append(cur)
     return [s for s in out if len(s['recs']) >= min_records]
+
+
+def _hhmm_to_min(text):
+    h, m = text.strip().split(':')
+    return int(h) * 60 + int(m)
+
+
+def _hhmm_in_window(minute, window):
+    """window 形如 "23:30-01:30"，支持跨零点；非法格式按不过滤处理。"""
+    try:
+        a, b = window.split('-')
+        lo, hi = _hhmm_to_min(a), _hhmm_to_min(b)
+    except ValueError:
+        print('!! time_window 格式无效（应为 HH:MM-HH:MM）：%r' % window, file=sys.stderr)
+        return True
+    if lo <= hi:
+        return lo <= minute <= hi
+    return minute >= lo or minute <= hi
+
+
+def filter_sessions(sessions, window, keep_ids=()):
+    """按开场时间过滤场次，返回 (保留, 剔除)。
+
+    只有开场时间落在 window 内才收录；keep_ids 里的场次（形如
+    "2026-11-02_1815"）无条件保留，用于傍晚/下午开播的正式场次。
+    """
+    if not window:
+        return sessions, []
+
+    keep = set(keep_ids or ())
+    kept, dropped = [], []
+    for s in sessions:
+        st = datetime.fromtimestamp(s['start'])
+        name = st.strftime('%Y-%m-%d_%H%M')
+        if name in keep or _hhmm_in_window(st.hour * 60 + st.minute, window):
+            kept.append(s)
+        else:
+            dropped.append(s)
+    return kept, dropped
 
 
 def build_session(s):
