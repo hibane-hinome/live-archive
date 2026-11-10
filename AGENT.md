@@ -1,7 +1,7 @@
 # AGENT.md — 火羽直播档案三件套
 
 > **这份文件的用途**：工作区被误删 / 上下文丢失 / 换了新对话之后，读这一份就能把整条链路接回来。
-> 最后核对：2026-11-10 夜（数字都是当天实测的库内现状，会随时间增长）。
+> 最后核对：2026-11-11 凌晨（数字都是 11-10 那天实测的库内现状，会随时间增长）。
 > 当晚修完了项目从 `D:/forDesktop/` 搬到 `D:/HibaneHinome/` 后的路径断链，并给导出加了时间窗过滤。
 
 ---
@@ -386,9 +386,11 @@ time_window_keep = ["2026-11-02_1815"]
 
 `date` 是开场日，`end` 可能是次日。算结束时间用 `start + dur*60`，不要用「当天 24:00」。
 
-### 9. `live-archive-daily` skill 里的库路径已过期
+### 9. `live-archive-daily` skill 里的库路径（2026-11-11 已同步）
 
-`~/.workbuddy/skills/live-archive-daily/SKILL.md` 里写的还是 `LiveCaptions-Translator/.../translation_history.db`。照它跑 dump 会读到旧库（缺 11-09 之后的数据）。**以本文件第 2 节的路径为准**，顺手改一下那份 skill 更好。
+`~/.workbuddy/skills/live-archive-daily/SKILL.md` 原先还写着 `D:/forDesktop/LiveCaptions-Translator/.../translation_history.db`，照它跑 dump 会读到旧库（缺 11-09 之后的数据）。2026-11-11 已把其中的库路径、仓库路径、`publish.cmd` 目录全部换成 `D:/HibaneHinome/...`，并在文件里注明「与 AGENT.md 冲突时以本文件为准」。
+
+以后再看到任何笔记 / skill / 脚本写着 `D:/forDesktop/`，一律先核对再跑——旧 C# 库还在那里，指错就会删场次（见坑 1）。
 
 ---
 
@@ -422,5 +424,5 @@ time_window_keep = ["2026-11-02_1815"]
 - [x] `.data/` 备份 —— 2026-11-10 起走 `D:/MyDocument/live-archive-backup/`
 - [ ] `.data/` 要不要纳入 git（8.9 MB，单文件在 100 MB 以内可以；或继续用盘外备份 + 本文件记录路径）
 - [x] `danmaku-it` 要不要 `git init` —— 2026-11-10 已 init 并首次提交 `d1b4a01`（无 remote，凭证与 config 已挡在 .gitignore 外）
-- [ ] `live-archive-daily` skill 里的库路径要不要同步改掉
+- [x] `live-archive-daily` skill 里的库路径要不要同步改掉 —— 2026-11-11 已改（库/仓库/发布命令三处路径，见坑 9）；同时 README 的预览端口 8766 → 8799、数据来源描述改成 LiveTranslate + danmaku-it
 - [ ] 项目搬迁后，`config.toml` 的 `db` 目前是绝对路径 `D:/HibaneHinome/...`；若以后还会移动，考虑改成相对路径 `../.data/translation_history.db`（`load_config` 会按仓库根解析相对路径）

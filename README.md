@@ -1,14 +1,16 @@
 # live-archive
 
-火羽在 B 站直播的逐字稿档案。数据来自本机 [LiveCaptions-Translator](https://github.com/Arkueid/LiveCaptions-Translator)
-的字幕记录（日语语音识别 + 机器翻译），本仓库只保存整理后的结果，不保存数据库本身。
+火羽在 B 站直播的逐字稿档案。数据来自本机两个采集端：LiveTranslate（系统音频 → 日语 ASR → 混元 MT 译文）写 `TranslationHistory`，danmaku-it（B 站弹幕 / SC 旁路采集）写 `sc_message`、`danmaku`、`room_event`。两者共用一个 SQLite 文件，本仓库只保存整理后的结果，不入库数据库本身。
+
+整个链路（三个项目、库表结构、切场规则、已知坑、备份与重建）见 **`AGENT.md`**；本文件只讲站点本身。
 
 站点：https://hibane-hinome.github.io/live-archive/
 
 ## 结构
 
 ```
-config.toml              数据源与发布配置（db 路径、会话切分阈值）
+AGENT.md                 整条链路的总说明（库表结构、切场规则、坑、备份与重建），优先读这份
+config.toml              数据源与发布配置（db 路径、切场阈值、时间窗）
 site/
   index.html             页面骨架，构建时替换 {{TITLE}} {{DESC}} {{STREAMER}} {{V}}
   assets/                app.js（前端路由与检索）、style.css
@@ -45,7 +47,7 @@ publish.cmd --dry-run      :: 只报告会改什么，不写文件、不提交
 ```bash
 python tools/export.py                     # 从数据库同步场次（幂等，内容没变不落盘）
 python tools/build.py                      # 生成 dist/
-python -m http.server -d dist 8766         # 本地预览
+python -m http.server 8799 -d dist        # 本地预览，固定 8799（占住 dist/，重建前先停）
 python tools/publish.py                    # 导出 → 构建校验 → commit（默认不推送）
 python tools/publish.py --push             # 同上，但提交后推送
 ```
@@ -62,9 +64,11 @@ python tools/publish.py --push             # 同上，但提交后推送
 
 - 相邻记录间隔超过 30 分钟视为新的一场（跨零点的场次不会被拆开）。
 - 少于 20 条的片段当作误录，不进站点。
+- 只收**开场时间**落在 `config.toml` 的 `time_window`（默认 `23:30-01:30`，跨零点）内的场次，白天的游戏实况自动跳过；傍晚开播的正式场次登记在 `time_window_keep` 里。留空字符串 = 不过滤。
 - 话题按 `tools/common.py` 里的关键词表归类；表是按这批直播的具体内容调的，属于经验规则，不是通用分类器。
 - 逐字稿保留识别原文；`quotes.json` 里的摘录做过断句、明显错字与语序的校正，两者会有细微差异。
 - 摘录按「段」收录：一般连同引出它的那句观众发言或当时语境一起保留，不做单句截取，也不作评价。
+- 校对译文时以 `sc_message` 为准：`message` 是观众手写的原文，`message_trans` 是 B 站官方译文；ASR + 机器翻译会错，SC 不会。同一份逐字稿里混着两代翻译器（早期 `OpenAI`、2026-11 起 `hunyuan-mt-chimera-7b`），对比时注意 `ApiUsed`。
 
 ## 部署
 
