@@ -878,6 +878,7 @@
     ];
   }
   function toolSubsHead(extraBtn) {
+    extraBtn = extraBtn || '';
     var ext = D.meta.ext || {};
     var sizeTxt = ext.size ? (ext.size < 1024 * 1024
       ? Math.round(ext.size / 1024) + ' KB'
