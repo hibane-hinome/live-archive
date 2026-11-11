@@ -264,7 +264,7 @@
           '</div>' +
           '<div class="hero-cta">' +
             '<a class="btn primary" href="#/quotes">读摘录 →</a>' +
-            '<a class="btn" href="#/archive">进档案库</a>' +
+            '<a class="btn" href="#/archive">进存档</a>' +
           '</div>' +
           // 主播入口放在首屏：想看现场、想核对记录，从这里直接出去
           // 直播间块用直播封面，主页块用主播头像，不再额外写一行说明
@@ -332,7 +332,7 @@
       '</section>' +
 
       '<section class="sec rv">' +
-        '<div class="sec-head"><h2><i>02</i>今日直播</h2><a class="more" href="#/diary">全部日记 →</a></div>' +
+        '<div class="sec-head"><h2><i>02</i>日记</h2><a class="more" href="#/diary">全部日记 →</a></div>' +
         (latestDiary
           ? '<div class="dgrid">' + latestDiaryCard(latestDiary) +
               '<aside class="dside">' +
@@ -354,7 +354,7 @@
       '</section>' +
 
       '<section class="sec rv" id="allSessions">' +
-        '<div class="sec-head"><h2><i>03</i>全部场次</h2><a class="more" href="#/archive">档案库 →</a></div>' +
+        '<div class="sec-head"><h2><i>03</i>全部场次</h2><a class="more" href="#/archive">存档 →</a></div>' +
         '<div class="sgrid">' + allSessions.slice(sfrom, sfrom + SPAGE).map(sessionCard).join('') + '</div>' +
         pagerHTML(state.spage, spages, allSessions.length, '场') +
       '</section>';
@@ -807,7 +807,7 @@
     app.innerHTML =
       '<section class="about">' +
         '<div class="kicker">ABOUT THIS ARCHIVE</div>' +
-        '<h2>关于<span class="accent">这份档案</span></h2>' +
+        '<h2>关于<span class="accent">这份存档</span></h2>' +
         '<p class="about-lead">把 <b>' + esc(D.meta.streamer) + '</b> 直播里的日语语音自动转成文字，' +
           '再由本机小模型逐条译成中文，按场次整理成可检索的对照记录。</p>' +
         '<div class="facts">' +
