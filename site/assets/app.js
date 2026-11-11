@@ -877,9 +877,10 @@
       [sub.updated ? esc(sub.updated) : '—', '数据更新']
     ];
   }
-  function toolSubsHead(extraBtn) {
+  function toolSubsHead(t, extraBtn) {
     extraBtn = extraBtn || '';
     var ext = D.meta.ext || {};
+    var icon = (t && t.icon) || 'brand/ext-icon.png';
     var sizeTxt = ext.size ? (ext.size < 1024 * 1024
       ? Math.round(ext.size / 1024) + ' KB'
       : (ext.size / 1048576).toFixed(1) + ' MB') : '';
@@ -889,7 +890,7 @@
           (sizeTxt ? '<s>' + sizeTxt + '</s>' : '') + '</a>'
       : '<span class="dlbtn off">安装包未生成</span>';
     return '<div class="tool-head">' +
-      '<img class="tool-icon" src="brand/ext-icon.png" alt="" width="60" height="60" decoding="async">' +
+      '<img class="tool-icon" src="' + icon + '" alt="" width="60" height="60" decoding="async">' +
       '<div class="tool-name">' +
         '<b>录播字幕</b>' +
         '<span class="tool-ver">v' + esc(ext.ver || '—') + '</span>' +
@@ -907,13 +908,14 @@
       id: 'subs',
       name: '录播字幕',
       kind: 'Chrome / Edge 浏览器插件',
+      icon: 'brand/ext-icon.png',
       summary: '把当时逐句翻出来的中日对照，重新贴回录播画面上——录播本身没字幕，字幕在这儿。' +
         '日文原文在上、中文译文在下，跟着画面逐句走，和逐字稿、摘录完全对得上。',
       facts: toolSubsFacts,
-      page: function () {
+      page: function (t) {
         var sub = D.meta.subs || {};
         var ext = D.meta.ext || {};
-        return '<article class="tool">' + toolSubsHead() +
+        return '<article class="tool">' + toolSubsHead(t) +
           '<p class="tool-desc">看 B 站录播时，在播放器下方叠一行双语字幕：<b>日文原文在上、中文译文在下</b>，' +
             '跟着画面逐句走。字幕不是听译出来的，就是这场直播当时的那份记录，所以和逐字稿、摘录完全对得上。</p>' +
           toolSubsFactsHtml() +
@@ -986,16 +988,15 @@
           '<div class="kicker">TOOLS</div>' +
           '<p class="tback"><a href="#/tools">← 全部工具</a></p>' +
           '<h2>' + esc(one.name) + '<span class="accent">·</span>' + esc(one.kind) + '</h2>' +
-          one.page() +
+          one.page(one) +
         '</section>';
     } else {
       app.innerHTML =
         '<section class="hero hero-sm">' +
           '<div class="hero-copy">' +
             '<div class="kicker">TOOLS</div>' +
-            '<h1>从存档里<span class="accent">长出来</span>的工具</h1>' +
-            '<p class="lead">从这份存档里长出来的小东西，每件一个页面：是什么、怎么装、数据从哪来。' +
-              '当前共 ' + TOOLS.length + ' 件。</p>' +
+            '<h1>工具</h1>' +
+            '<p class="lead">当前共 ' + TOOLS.length + ' 件。</p>' +
           '</div>' +
         '</section>' +
         '<div class="dlist">' + TOOLS.map(toolEntry).join('') +
