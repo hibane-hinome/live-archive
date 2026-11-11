@@ -4,6 +4,9 @@
 逐句跟着视频走。字幕数据来自 LiveTranslate 的翻译数据库，随存档站一起发布在
 GitHub Pages 上，插件每天自动取最新。
 
+不想手动装源码的话，工具页有打包好的 zip：
+<https://hibane-hinome.github.io/live-archive/#/tools>（下载后解压，按下面第 2-4 步装）。
+
 ## 安装（Chrome / Edge，开发者模式）
 
 1. 打开 `chrome://extensions/`（Edge 是 `edge://extensions/`）

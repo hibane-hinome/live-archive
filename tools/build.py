@@ -15,6 +15,7 @@ from datetime import datetime, timedelta, timezone
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import common
 import export_subs
+import pack_ext
 
 COPY = ['index.html', 'assets/app.js', 'assets/style.css', 'brand']
 
@@ -67,6 +68,7 @@ def main():
 
     cfg = common.load_config(args.config)
     site_dir, dist = cfg['site']['dir'], cfg['site']['dist']
+    root = os.path.dirname(site_dir)
 
     with open(os.path.join(site_dir, 'data', 'profile.json'), encoding='utf-8') as f:
         profile = json.load(f)
@@ -138,6 +140,30 @@ def main():
             'body': d['body'],
         })
 
+    # 工具页要摆出来的两块事实：字幕轨有多大、插件包多大。
+    # 字幕轨读已入库的 index.json（本地刚算过、CI 用仓库里那份），插件包直接把
+    # extension/ 打一遍——两边都不需要页面自己再去猜或再去请求。
+    subs_meta = {}
+    try:
+        with open(os.path.join(site_dir, 'data', 'subs', 'index.json'), encoding='utf-8') as f:
+            si = json.load(f)
+        subs_meta = {
+            'sessions': si.get('count', 0),
+            'blocks': si.get('blocks', 0),
+            'updated': si.get('updated', ''),
+            'latest': (si['sessions'][-1]['key'] if si.get('sessions') else ''),
+        }
+    except Exception as exc:
+        print('!! 读不到字幕索引（%s），工具页不显示字幕统计' % exc, file=sys.stderr)
+
+    ext_meta, ext_blob, ext_name = {}, None, ''
+    try:
+        ext_name, ext_blob, ext_ver, ext_files = pack_ext.build(os.path.join(root, 'extension'))
+        ext_meta = {'file': 'download/' + ext_name, 'latest': 'download/hibane-subs-latest.zip',
+                    'ver': ext_ver, 'size': len(ext_blob), 'files': ext_files}
+    except Exception as exc:
+        print('!! 插件打包失败（%s），工具页不显示下载按钮' % exc, file=sys.stderr)
+
     data = {
         'meta': {
             'streamer': profile['streamer'],
@@ -153,6 +179,9 @@ def main():
             'built': build_stamp(),
             'quoteCount': len(q_out),
             'diaryCount': len(diary_out),
+            # 工具页的数据：字幕轨概况 + 插件包（版本/体积/下载路径）
+            'subs': subs_meta,
+            'ext': ext_meta,
         },
         'topics': [[common.TOPIC_NAMES[i], common.TOPIC_COLORS[i]] for i in range(len(common.TOPIC_NAMES))],
         'sessions': sess_out,
@@ -167,6 +196,10 @@ def main():
     hash_data = dict(data)
     hash_data['meta'] = dict(data['meta'])
     hash_data['meta']['built'] = ''
+    # 字幕轨的「更新于」也是构建时刻，同样不计入版本：版本要表达的是内容变没变
+    if hash_data['meta'].get('subs'):
+        hash_data['meta']['subs'] = dict(hash_data['meta']['subs'])
+        hash_data['meta']['subs']['updated'] = ''
     hash_js = 'window.DATA = ' + json.dumps(hash_data, ensure_ascii=False, separators=(',', ':')) + ';\n'
     h = hashlib.sha256(hash_js.encode('utf-8'))
     for rel in ('assets/app.js', 'assets/style.css'):
@@ -217,9 +250,16 @@ def main():
         print('!! 字幕轨导出失败（%s），本站点照常发布' % exc, file=sys.stderr)
         n_subs, n_blocks, sub_bytes = 0, 0, 0
 
+    # 插件安装包：工具页直接给下载，跟站点同域，不额外找托管
+    if ext_blob:
+        pack_ext.write(dist, ext_name, ext_blob)
+
     print('dist: %d 场 / %d 条 / %d 段摘录 / %d 篇日记 · data.js %d KB · v=%s'
           % (len(sess_out), len(recs_out), len(q_out), len(diary_out), len(js.encode('utf-8')) // 1024, ver))
     print('subs: %d 场字幕 / %d 块 / %d KB' % (n_subs, n_blocks, sub_bytes // 1024))
+    if ext_meta:
+        print('ext: v%s / %d 个文件 / %d KB → %s'
+              % (ext_meta['ver'], ext_meta['files'], ext_meta['size'] // 1024, ext_meta['file']))
     if skipped:
         print('!! 找不到对应场次的摘录:', ', '.join(skipped))
     if skipped_diary:

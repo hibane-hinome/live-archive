@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>overflow probe</title>
+<style>body{background:#111;color:#8f8;font:12px monospace;margin:0}iframe{width:100vw;height:100vh;border:0}</style>
+<iframe id="f" src="/dist/"></iframe>
+<pre id="out">running…</pre>
+<script>
+// 同源 iframe 里逐个元素找「比视口还宽」的，把元凶列出来
+const q = new URLSearchParams(location.search);
+const W = parseInt(q.get('w') || '420', 10);
+const H = parseInt(q.get('h') || '900', 10);
+document.getElementById('f').style.width = W + 'px';
+document.getElementById('f').style.height = H + 'px';
+document.getElementById('f').src = '/dist/' + (q.get('p') || '');
+const out = document.getElementById('out');
+const wait = setInterval(() => {
+  const d = document.getElementById('f').contentDocument;
+  if (!d || !d.body || !d.querySelector('.hero-copy, .about, .tools, .dwrap')) return;
+  clearInterval(wait);
+  const iw = d.documentElement.clientWidth;
+  const lines = ['innerWidth=' + iw + ' scrollWidth=' + d.documentElement.scrollWidth];
+  if (d.documentElement.scrollWidth > iw + 1) {
+    const bad = [];
+    d.querySelectorAll('*').forEach(el => {
+      const r = el.getBoundingClientRect();
+      if (r.right > iw + 2 && r.width > 24) {
+        bad.push(el.tagName + '.' + String(el.className).slice(0, 40) + ' right=' + Math.round(r.right) + ' w=' + Math.round(r.width));
+      }
+    });
+    lines.push('溢出元素 ' + bad.length + ' 个：');
+    lines.push(...bad.slice(0, 15));
+  } else {
+    lines.push('无溢出');
+  }
+  out.textContent = lines.join('\n');
+  document.title = 'PROBE-DONE';
+}, 250);
+</script>

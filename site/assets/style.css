@@ -206,62 +206,77 @@ main{position:relative;z-index:2;max-width:1240px;margin:0 auto;padding:0 40px 9
 
 /* 主播入口：放在 hero 最上面一行。
    不做两个独立胶囊（悬在上面太跳），合成一条分段条：一个外框、两段可点，
-   中间一道竖线分开；直播间的圆点会呼吸，说明那里是「活的」。 */
+   中间一道竖线分开；直播间的圆点会呼吸，说明那里是「活的」。
+   尺寸按「第一眼就该看见」来做：封面按 16:9 给足，标题到 15px，比正文里的链接重一档。 */
 .hero-links{
   grid-column:1/-1;justify-self:start;
   display:flex;align-items:stretch;width:fit-content;max-width:100%;
-  border:1px solid var(--line);border-radius:16px;overflow:hidden;
+  border:1px solid var(--line-strong);border-radius:20px;overflow:hidden;
   background:
-    radial-gradient(140% 200% at 0% 0%,rgba(255,122,69,.11),rgba(255,122,69,0) 48%),
-    linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.012));
-  box-shadow:0 22px 44px -38px rgba(0,0,0,.95);
+    radial-gradient(120% 220% at 0% 0%,rgba(255,122,69,.16),rgba(255,122,69,0) 52%),
+    linear-gradient(180deg,rgba(255,255,255,.062),rgba(255,255,255,.014));
+  box-shadow:0 26px 54px -40px rgba(0,0,0,.95),inset 0 1px 0 rgba(255,255,255,.05);
+  transition:border-color .25s,box-shadow .25s;
 }
+.hero-links:hover{border-color:rgba(255,122,69,.34);box-shadow:0 30px 60px -40px rgba(255,122,69,.35),inset 0 1px 0 rgba(255,255,255,.06)}
 a.hl{
-  position:relative;display:flex;align-items:center;gap:12px;
-  padding:10px 34px 10px 12px;text-decoration:none;
-  transition:background .2s;
+  position:relative;display:flex;align-items:center;gap:15px;
+  padding:14px 52px 14px 16px;text-decoration:none;min-width:246px;
+  transition:background .22s;
 }
 a.hl + a.hl{border-left:1px solid var(--line)}
-a.hl:hover{background:rgba(255,122,69,.08)}
+a.hl:hover{background:rgba(255,122,69,.075)}
 a.hl .thumb{
-  display:block;width:56px;height:32px;flex:0 0 auto;
-  border-radius:9px;object-fit:cover;background:rgba(0,0,0,.3);
-  box-shadow:0 2px 10px -4px rgba(0,0,0,.9),inset 0 0 0 1px rgba(255,255,255,.06);
+  display:block;width:116px;height:65px;flex:0 0 auto;
+  border-radius:12px;object-fit:cover;background:rgba(0,0,0,.35);
+  box-shadow:0 6px 18px -8px rgba(0,0,0,.95),inset 0 0 0 1px rgba(255,255,255,.07);
+  transition:transform .25s;
 }
-a.hl .thumb.round{width:32px;height:32px;border-radius:50%;box-shadow:0 0 0 1px rgba(255,122,69,.35),0 0 0 4px rgba(255,122,69,.07)}
-a.hl .hl-cap{display:flex;flex-direction:column;gap:3px;line-height:1.15}
+a.hl:hover .thumb{transform:translateY(-1px)}
+a.hl .thumb.round{
+  width:52px;height:52px;border-radius:50%;
+  box-shadow:0 0 0 1px rgba(255,122,69,.4),0 0 0 5px rgba(255,122,69,.08),0 8px 20px -12px rgba(0,0,0,.9);
+}
+a.hl .hl-cap{display:flex;flex-direction:column;gap:5px;line-height:1.12}
 a.hl .hl-cap b{
-  display:flex;align-items:center;font-size:12.5px;font-weight:600;letter-spacing:.06em;color:var(--ink-2);
+  display:flex;align-items:center;font-size:15px;font-weight:600;letter-spacing:.06em;color:var(--ink);
 }
 a.hl .hl-cap em{
-  font-style:normal;font-family:var(--mono);font-size:10.5px;
-  letter-spacing:.01em;color:var(--dim-2);transition:color .2s;
+  font-style:normal;font-family:var(--mono);font-size:11.5px;
+  letter-spacing:.02em;color:var(--dim-2);transition:color .2s;
 }
 a.hl:hover .hl-cap em{color:var(--dim)}
 /* 外链角标：平时很淡，悬停才亮，不喧宾夺主 */
 a.hl .hl-arrow{
-  position:absolute;top:11px;right:12px;font-style:normal;font-size:10.5px;
-  color:var(--fire-soft);opacity:.28;transition:.2s;
+  position:absolute;top:14px;right:15px;font-style:normal;font-size:12px;
+  color:var(--fire-soft);opacity:.3;transition:.2s;
 }
 a.hl:hover .hl-arrow{opacity:.95;transform:translate(1px,-1px)}
 /* 直播间圆点：缓慢呼吸，和「现在可以去」这件事对上 */
 a.hl .hl-dot{
-  width:6px;height:6px;border-radius:50%;background:var(--fire);
-  margin-right:7px;flex:0 0 auto;animation:hbPulse 2.6s ease-out infinite;
+  width:7px;height:7px;border-radius:50%;background:var(--fire);
+  margin-right:8px;flex:0 0 auto;animation:hbPulse 2.6s ease-out infinite;
 }
 @keyframes hbPulse{
   0%{box-shadow:0 0 0 0 rgba(255,122,69,.5)}
-  65%{box-shadow:0 0 0 7px rgba(255,122,69,0)}
+  65%{box-shadow:0 0 0 8px rgba(255,122,69,0)}
   100%{box-shadow:0 0 0 0 rgba(255,122,69,0)}
 }
 @media(prefers-reduced-motion:reduce){a.hl .hl-dot{animation:none}}
+@media(max-width:860px){
+  a.hl{min-width:0;padding:13px 44px 13px 14px;gap:12px}
+  a.hl .thumb{width:92px;height:52px}
+  a.hl .thumb.round{width:44px;height:44px}
+  a.hl .hl-cap b{font-size:14px}
+  a.hl .hl-cap em{font-size:10.5px}
+}
 @media(max-width:640px){
   .hero-links{width:100%;flex-direction:column}
   a.hl + a.hl{border-left:0;border-top:1px solid var(--line)}
-  a.hl{padding:9px 34px 9px 11px}
-  a.hl .thumb{width:48px;height:28px}
-  a.hl .thumb.round{width:28px;height:28px}
-  a.hl .hl-cap b{font-size:12px}
+  a.hl{padding:12px 40px 12px 13px}
+  a.hl .thumb{width:84px;height:47px}
+  a.hl .thumb.round{width:40px;height:40px}
+  a.hl .hl-cap b{font-size:13.5px}
   a.hl .hl-cap em{font-size:10px}
 }
 
@@ -734,6 +749,70 @@ a.dentry.dmini .dlinks{margin-top:16px;padding-top:13px}
 }
 .about .steps li b{color:var(--ink-2);font-weight:600}
 .about code{font-family:var(--mono);font-size:12px;background:rgba(255,255,255,.06);padding:1px 6px;border-radius:4px;color:var(--gold)}
+
+/* ---------- 工具页 ----------
+   沿用 about 的版式（多一档宽度），主卡做成一张「商品卡」：
+   左边插件图标，右边名字与版本，下载按钮压在最右——一进页面就能点。 */
+.tools{padding-top:64px;max-width:880px}
+.tools-lead{font-size:16px!important;line-height:2;color:var(--ink-2)!important;max-width:660px}
+
+.tool{
+  position:relative;margin:34px 0 4px;padding:26px 28px 20px;border-radius:20px;
+  border:1px solid rgba(255,122,69,.24);
+  background:
+    radial-gradient(120% 190% at 0% 0%,rgba(255,122,69,.14),rgba(255,122,69,0) 56%),
+    linear-gradient(160deg,rgba(255,255,255,.058),rgba(255,255,255,.012));
+  box-shadow:0 34px 64px -50px rgba(255,122,69,.55),inset 0 1px 0 rgba(255,255,255,.05);
+}
+.tool-head{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.tool-icon{
+  width:60px;height:60px;border-radius:16px;flex:0 0 auto;
+  box-shadow:0 0 0 1px rgba(255,255,255,.09),0 12px 26px -16px rgba(0,0,0,.95);
+}
+.tool-name{display:flex;align-items:baseline;flex-wrap:wrap;gap:2px 10px;min-width:0}
+.tool-name b{font-family:var(--jp);font-size:23px;font-weight:500;letter-spacing:.03em;color:var(--ink)}
+.tool-name em{flex:1 1 100%;font-style:normal;font-size:11px;letter-spacing:.14em;color:var(--dim-2)}
+.tool-ver{
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;color:var(--fire-soft);
+  border:1px solid rgba(255,122,69,.3);border-radius:999px;padding:1px 8px;
+}
+.dlbtn{
+  margin-left:auto;display:inline-flex;align-items:center;gap:9px;
+  padding:12px 22px;border-radius:999px;white-space:nowrap;
+  background:linear-gradient(140deg,var(--fire-soft),var(--fire));color:#1c0d06;
+  font-size:14px;font-weight:600;letter-spacing:.02em;
+  box-shadow:0 16px 32px -18px rgba(255,122,69,.95);
+  transition:transform .2s,box-shadow .2s;
+}
+.dlbtn i{font-style:normal;font-size:15px;line-height:1;opacity:.85}
+.dlbtn s{text-decoration:none;font-family:var(--mono);font-size:10.5px;font-weight:500;opacity:.6}
+.dlbtn:hover{transform:translateY(-1px);box-shadow:0 20px 36px -16px rgba(255,122,69,1)}
+.dlbtn.off{
+  background:none;border:1px dashed var(--line-strong);color:var(--dim-2);
+  box-shadow:none;font-weight:400;cursor:default;
+}
+.tool-desc{margin:18px 0 0!important;font-size:13.5px!important;line-height:1.95!important;color:var(--dim)!important}
+.tool-desc b{color:var(--ink-2)!important;font-weight:500}
+.tool-facts{
+  display:grid;grid-template-columns:repeat(4,1fr);
+  margin:22px 0 0;padding:16px 0 0;list-style:none;border-top:1px solid var(--line);
+}
+.tool-facts li{padding-right:18px}
+.tool-facts li+li{border-left:1px solid var(--line);padding-left:18px}
+.tool-facts li b{
+  display:block;font-family:var(--jp);font-size:21px;font-weight:500;
+  line-height:1.3;color:var(--ink);letter-spacing:.01em;
+}
+.tool-facts li b i{font-style:normal;font-family:var(--sans);font-size:11px;color:var(--dim-2);margin-left:4px;letter-spacing:0}
+.tool-facts li span{font-size:10.5px;letter-spacing:.15em;color:var(--dim-2)}
+@media(max-width:640px){
+  .tool{padding:22px 20px 18px}
+  .tool-icon{width:52px;height:52px;border-radius:14px}
+  .tool-name b{font-size:20px}
+  .dlbtn{margin:14px 0 0;width:100%;justify-content:center}
+  .tool-facts{grid-template-columns:repeat(2,1fr);gap:14px 0}
+  .tool-facts li:nth-child(3){border-left:0;padding-left:0}
+}
 
 @media(max-width:1100px){
   .facts .range{margin-left:0;flex-basis:100%;margin-top:8px}
