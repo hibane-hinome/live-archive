@@ -230,7 +230,7 @@
         '<p>' + esc(txt) + '</p><span>' + esc(q.t) + ' →</span></a>';
     }).join('');
 
-    // 每天换一句：种子取构建日期，同一天进来看到的是同一段，跨天会变
+    // 每次打开随机一句：129 段里筛一遍 + 取模，微秒级，不构成性能负担
     // 长度上限按首屏能容纳的高度卡：太长会把引言压到折叠线以下
     var dq = (function () {
       var pool = D.quotes.filter(function (q) {
@@ -239,10 +239,7 @@
       });
       if (!pool.length) pool = D.quotes;
       if (!pool.length) return null;
-      var key = D.meta.generated || D.meta.lastDate || 'seed';
-      var seed = 0;
-      for (var i = 0; i < key.length; i++) seed = (seed * 31 + key.charCodeAt(i)) % 99991;
-      return pool[seed % pool.length];
+      return pool[Math.floor(Math.random() * pool.length)];
     })();
     // 摘录常按语音停顿断成多行、每行行首带「——」；直接 join 会连出「————」，
     // 这里剥掉行首行尾的破折号，同一处停顿只在行间补回一个
@@ -303,7 +300,7 @@
                 '<span>' + esc(dq.tag) + '</span>' +
                 '<a href="#/archive/' + dq.s + '?t=' + encodeURIComponent(dq.t) + '">' +
                   esc(dq.date.replace('-', '.')) + ' ' + esc(dq.t) + ' 回原稿 →</a>' +
-                '<em>从 ' + D.meta.quoteCount + ' 段摘录里每天换一句</em>' +
+                '<em>从 ' + D.meta.quoteCount + ' 段摘录里随机一句</em>' +
               '</figcaption>' +
             '</figure>'
           : '') +
