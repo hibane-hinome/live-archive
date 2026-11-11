@@ -156,7 +156,7 @@
     if (r.view === 'quotes') { setNav('quotes'); renderQuotes(); }
     else if (r.view === 'archive') { setNav('archive'); renderArchive(r.sid, r.q.t); }
     else if (r.view === 'diary') { setNav('diary'); renderDiary(r.seg1); }
-    else if (r.view === 'tools') { setNav('tools'); renderTools(); }
+    else if (r.view === 'tools') { setNav('tools'); renderTools(r.seg1); }
     else if (r.view === 'about') { setNav('about'); renderAbout(); }
     else { setNav('home'); renderHome(); }
     window.scrollTo(0, 0);
@@ -863,49 +863,60 @@
   }
 
   /* ---------- tools ---------- */
-  // 页面上的数字全部来自构建产物（meta.subs / meta.ext），不在前端写死，
-  // 免得插件发了新版、字幕涨了几千条，工具页还挂着去年的数。
-  function renderTools() {
+  // 工具做成「条目 → 详情页」，和日记一个结构：列表页放摘要卡片，点进去才是全文。
+  // 以后加工具就在 TOOLS 里添一个对象：id 决定链接 #/tools/<id>，
+  // summary 给列表页，page() 给详情页。数字一律从构建产物（meta）拿，不在前端写死。
+  function toolSubsFacts() {
     var sub = D.meta.subs || {};
     var ext = D.meta.ext || {};
     var latestKey = (sub.latest || '').replace('_', ' ');
+    return [
+      [(sub.sessions || 0) + '<i>场</i>', '已配字幕'],
+      [num(sub.blocks || 0) + '<i>条</i>', '双语字幕'],
+      [latestKey ? esc(latestKey.slice(5)) : '—', '最新一场'],
+      [sub.updated ? esc(sub.updated) : '—', '数据更新']
+    ];
+  }
+  function toolSubsHead(extraBtn) {
+    var ext = D.meta.ext || {};
     var sizeTxt = ext.size ? (ext.size < 1024 * 1024
       ? Math.round(ext.size / 1024) + ' KB'
       : (ext.size / 1048576).toFixed(1) + ' MB') : '';
+    var btn = ext.file
+      ? '<a class="dlbtn" href="' + esc(ext.file) + '" download>' +
+          '<i aria-hidden="true">↓</i>下载插件' +
+          (sizeTxt ? '<s>' + sizeTxt + '</s>' : '') + '</a>'
+      : '<span class="dlbtn off">安装包未生成</span>';
+    return '<div class="tool-head">' +
+      '<img class="tool-icon" src="brand/ext-icon.png" alt="" width="60" height="60" decoding="async">' +
+      '<div class="tool-name">' +
+        '<b>录播字幕</b>' +
+        '<span class="tool-ver">v' + esc(ext.ver || '—') + '</span>' +
+        '<em>Chrome / Edge 浏览器插件</em>' +
+      '</div>' + btn + extraBtn + '</div>';
+  }
+  function toolSubsFactsHtml() {
+    return '<ul class="tool-facts">' + toolSubsFacts().map(function (f) {
+      return '<li><b>' + f[0] + '</b><span>' + f[1] + '</span></li>';
+    }).join('') + '</ul>';
+  }
 
-    app.innerHTML =
-      '<section class="about tools">' +
-        '<div class="kicker">TOOLS</div>' +
-        '<h2>工具<span class="accent">与下载</span></h2>' +
-        '<p class="tools-lead">从这份存档里长出来的小东西。眼下一个：把当时逐句翻出来的中日对照，' +
-          '重新贴回录播画面上——录播本身没字幕，字幕在这儿。</p>' +
-
-        '<article class="tool">' +
-          '<div class="tool-head">' +
-            '<img class="tool-icon" src="brand/ext-icon.png" alt="" width="60" height="60" decoding="async">' +
-            '<div class="tool-name">' +
-              '<b>录播字幕</b>' +
-              '<span class="tool-ver">v' + esc(ext.ver || '—') + '</span>' +
-              '<em>Chrome / Edge 浏览器插件</em>' +
-            '</div>' +
-            (ext.file
-              ? '<a class="dlbtn" href="' + esc(ext.file) + '" download>' +
-                  '<i aria-hidden="true">↓</i>下载插件' +
-                  (sizeTxt ? '<s>' + sizeTxt + '</s>' : '') + '</a>'
-              : '<span class="dlbtn off">安装包未生成</span>') +
-          '</div>' +
-
+  var TOOLS = [
+    {
+      id: 'subs',
+      name: '录播字幕',
+      kind: 'Chrome / Edge 浏览器插件',
+      summary: '把当时逐句翻出来的中日对照，重新贴回录播画面上——录播本身没字幕，字幕在这儿。' +
+        '日文原文在上、中文译文在下，跟着画面逐句走，和逐字稿、摘录完全对得上。',
+      facts: toolSubsFacts,
+      page: function () {
+        var sub = D.meta.subs || {};
+        var ext = D.meta.ext || {};
+        return '<article class="tool">' + toolSubsHead() +
           '<p class="tool-desc">看 B 站录播时，在播放器下方叠一行双语字幕：<b>日文原文在上、中文译文在下</b>，' +
             '跟着画面逐句走。字幕不是听译出来的，就是这场直播当时的那份记录，所以和逐字稿、摘录完全对得上。</p>' +
-
-          '<ul class="tool-facts">' +
-            '<li><b>' + (sub.sessions || 0) + '<i>场</i></b><span>已配字幕</span></li>' +
-            '<li><b>' + num(sub.blocks || 0) + '<i>条</i></b><span>双语字幕</span></li>' +
-            '<li><b>' + (latestKey ? esc(latestKey.slice(5)) : '—') + '</b><span>最新一场</span></li>' +
-            '<li><b>' + (sub.updated ? esc(sub.updated) : '—') + '</b><span>数据更新</span></li>' +
-          '</ul>' +
+          toolSubsFactsHtml() +
         '</article>' +
-
         '<div class="box"><h3>安装</h3>' +
           '<ol class="steps">' +
             '<li><b>下载</b>　点上面的按钮拿到 <code>.zip</code>，解压到一个你不会随手删掉的文件夹' +
@@ -915,7 +926,6 @@
             '<li><b>选中文件夹</b>　选解压出来的那个目录（里面有 <code>manifest.json</code> 的那层），装完就好。</li>' +
           '</ol>' +
         '</div>' +
-
         '<div class="box"><h3>用法</h3>' +
           '<p><b>打开任意一个录播视频页</b>，播放器右下角会出现一个「译」按钮，点开是控制面板。' +
             '剩下的基本不用管：</p>' +
@@ -925,7 +935,6 @@
             '<code>−10 / −1 / +1 / +10</code> 推一下，按稿件记住，下次不用再调。</p>' +
           '<p><b>显示</b>　双语 / 仅中文 / 仅原文三种模式，字号和高度都能拖；进全屏也跟着走。</p>' +
         '</div>' +
-
         '<div class="box"><h3>数据从哪来</h3>' +
           '<p>字幕轨跟本站同源：<code>translation_history.db</code> 里每一行「日文原文 + 中文译文 + 时间」' +
             '直接切成字幕块，碎句按停顿合并（不然一句一闪过看不清），ASR 重述的重复句去掉。' +
@@ -937,15 +946,60 @@
             '<a href="' + esc(ext.latest || 'download/hibane-subs-latest.zip') + '">hibane-subs-latest.zip</a>' +
             ' 永远指向最新版。</p>' +
         '</div>' +
-
         '<div class="box warn"><h3>先说清楚</h3>' +
           '<p><b>只在 B 站视频页生效</b>，直播间里不叠（直播时用的是另一套实时字幕）。</p>' +
           '<p><b>时间是推出来的，不是打点打出来的。</b>老场次的记录时间是「这句话翻完」的时刻，' +
             '导出时按语速把句长估回去，误差中位 0.7 秒左右——听感上够用，做逐帧校对不够。</p>' +
           '<p>字幕内容就是逐字稿原文，<b>机器识别与机器翻译，未逐条校对</b>，错误常见，别当引文用。' +
             '插件是个人做的，与主播本人、B 站官方无关。</p>' +
+        '</div>';
+      }
+    }
+  ];
+
+  function toolEntry(t) {
+    var facts = (t.facts ? t.facts() : []).slice(0, 3).map(function (f) {
+      return '<li><b>' + f[0] + '</b><span>' + f[1] + '</span></li>';
+    }).join('');
+    return '<article class="dentry tentry">' +
+      '<div class="dhead">' +
+        '<div class="twho">' +
+          '<img class="tool-icon" src="' + t.icon + '" alt="" width="48" height="48" decoding="async">' +
+          '<div class="tool-name"><b>' + esc(t.name) + '</b><em>' + esc(t.kind) + '</em></div>' +
         '</div>' +
-      '</section>';
+        '<div class="tlinks"><a class="topen" href="#/tools/' + t.id + '">查看详情 →</a></div>' +
+      '</div>' +
+      '<p class="dsum">' + esc(t.summary) + '</p>' +
+      (facts ? '<ul class="tool-facts tmini">' + facts + '</ul>' : '') +
+    '</article>';
+  }
+
+  function renderTools(id) {
+    var one = id ? TOOLS.filter(function (t) { return t.id === id; })[0] : null;
+    // 键对不上（旧链接、手改过的地址）就退回列表，别给一个空页面
+    if (id && !one) { location.replace('#/tools'); return; }
+
+    if (one) {
+      app.innerHTML =
+        '<section class="about tools">' +
+          '<div class="kicker">TOOLS</div>' +
+          '<p class="tback"><a href="#/tools">← 全部工具</a></p>' +
+          '<h2>' + esc(one.name) + '<span class="accent">·</span>' + esc(one.kind) + '</h2>' +
+          one.page() +
+        '</section>';
+    } else {
+      app.innerHTML =
+        '<section class="hero hero-sm">' +
+          '<div class="hero-copy">' +
+            '<div class="kicker">TOOLS</div>' +
+            '<h1>从存档里<span class="accent">长出来</span>的工具</h1>' +
+            '<p class="lead">从这份存档里长出来的小东西，每件一个页面：是什么、怎么装、数据从哪来。' +
+              '当前共 ' + TOOLS.length + ' 件。</p>' +
+          '</div>' +
+        '</section>' +
+        '<div class="dlist">' + TOOLS.map(toolEntry).join('') +
+          (TOOLS.length ? '' : '<div class="empty">还没有工具。</div>') + '</div>';
+    }
     setFoot();
   }
 

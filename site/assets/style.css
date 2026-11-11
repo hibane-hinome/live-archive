@@ -805,6 +805,37 @@ a.dentry.dmini .dlinks{margin-top:16px;padding-top:13px}
 }
 .tool-facts li b i{font-style:normal;font-family:var(--sans);font-size:11px;color:var(--dim-2);margin-left:4px;letter-spacing:0}
 .tool-facts li span{font-size:10.5px;letter-spacing:.15em;color:var(--dim-2)}
+/* 工具列表页：条目卡片复用日记的 dentry 骨架，左图标右链接 */
+.tentry{padding:26px 30px 22px}
+.tentry::before{
+  background:linear-gradient(180deg,var(--fire),transparent 80%);opacity:.4;
+}
+.twho{display:flex;align-items:center;gap:14px;min-width:0}
+.twho .tool-icon{width:48px;height:48px;border-radius:13px;flex:none}
+.twho .tool-name b{font-size:20px}
+.twho .tool-name em{flex:1 1 100%;font-size:10.5px}
+.tlinks{display:flex;align-items:center;gap:14px}
+.topen{
+  font-size:12px;letter-spacing:.06em;color:var(--dim);white-space:nowrap;transition:.2s;
+}
+.topen:hover{color:var(--fire-soft)}
+.tentry .dsum{margin:4px 0 0}
+.tool-facts.tmini{
+  margin-top:16px;padding-top:14px;border-top:1px dashed var(--line);
+  grid-template-columns:repeat(3,auto);gap:0;
+}
+.tool-facts.tmini li{padding-right:16px}
+.tool-facts.tmini li+li{padding-left:16px}
+.tool-facts.tmini li b{font-size:16px}
+/* 详情页顶部那条「← 全部工具」 */
+.tback{margin:6px 0 0;font-size:12px;letter-spacing:.06em}
+.tback a{color:var(--dim-2);transition:.2s}
+.tback a:hover{color:var(--fire-soft)}
+@media(max-width:640px){
+  .tentry{padding:22px 20px 18px}
+  .twho{flex-wrap:wrap}
+  .tlinks{flex:1 1 100%;justify-content:flex-start}
+}
 @media(max-width:640px){
   .tool{padding:22px 20px 18px}
   .tool-icon{width:52px;height:52px;border-radius:14px}
