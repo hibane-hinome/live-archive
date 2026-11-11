@@ -465,7 +465,7 @@
 
     app.innerHTML =
       '<section class="hero hero-sm">' +
-        '<div class="hero-copy">' +
+        '<div class="hero-copy dwrap">' +
           '<a class="back" href="#/diary">← 全部日记</a>' +
           '<div class="kicker">STREAM DIARY</div>' +
           '<h1 class="dtitle-lg">' + esc(d.title) + '</h1>' +
