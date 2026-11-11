@@ -72,6 +72,20 @@
   word-break: break-word;
 }
 
+/* 免责小字：字号是中文的 1/3，淡淡地跟在译文下面 */
+.hbs-note {
+  margin-top: .22em;
+  font-size: calc(var(--hbs-size) * 0.32);
+  line-height: 1.2;
+  letter-spacing: .08em;
+  color: rgba(255, 255, 255, .55);
+  text-shadow:
+    -1px -1px 0 rgba(0, 0, 0, .7),
+    1px -1px 0 rgba(0, 0, 0, .7),
+    -1px 1px 0 rgba(0, 0, 0, .7),
+    1px 1px 0 rgba(0, 0, 0, .7);
+}
+
 /* ------------------------------------------------------------ 抽屉面板 */
 
 .hbs-panel {

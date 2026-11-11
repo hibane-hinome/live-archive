@@ -29,7 +29,7 @@
   var st = {
     index: null, indexAt: 0, indexErr: '', source: '',
     blocks: [], trackKey: '', trackInfo: null,
-    video: null, wrap: null, layer: null, zhEl: null, jpEl: null,
+    video: null, wrap: null, layer: null, zhEl: null, jpEl: null, noteEl: null,
     cur: -1, raf: 0, scale: 1, paused: false,
     key: '', how: '', bvid: '',
     offset: 0, manualKey: '',
@@ -264,6 +264,8 @@
     st.jpEl.textContent = showJp ? jp : '';
     st.zhEl.style.display = showZh ? '' : 'none';
     st.jpEl.style.display = showJp ? '' : 'none';
+    // 免责小字只跟着「有译文」出现：切到纯原文模式时这句不是翻译，不用标
+    st.noteEl.style.display = showZh ? '' : 'none';
     st.layer.classList.add('is-on');
   }
 
@@ -315,13 +317,19 @@
       jpEl.className = 'hbs-jp';
       var zhEl = document.createElement('div');
       zhEl.className = 'hbs-zh';
+      // 免责小字：译文是直播当时的机器翻译，标在字幕里省得逐句解释
+      var noteEl = document.createElement('div');
+      noteEl.className = 'hbs-note';
+      noteEl.textContent = 'AI 翻译 · 仅供参考';
       box.appendChild(jpEl);
       box.appendChild(zhEl);
+      box.appendChild(noteEl);
       layer.appendChild(box);
       wrap.appendChild(layer);
       st.layer = layer;
       st.zhEl = zhEl;
       st.jpEl = jpEl;
+      st.noteEl = noteEl;
       st.cur = -1;
       if (window.ResizeObserver) {
         new ResizeObserver(applyStyle).observe(wrap);
