@@ -119,8 +119,10 @@ site/
 tools/
   common.py               配置、读库、切场、话题分类（TOPICS 关键词表）
   export.py               db → site/data/sessions/
-  build.py                site/ → dist/（含 data.js、版本哈希、构建时刻）
+  export_subs.py          db → dist/subs/（浏览器插件的双语字幕轨，build.py 自动调用）
+  build.py                site/ → dist/（含 data.js、版本哈希、构建时刻、subs/）
   publish.py              导出 → 构建 → commit（默认不 push）
+extension/                浏览器插件：看录播时叠双语字幕（见坑 12 与 extension/README.md）
 dist/                     构建产物，不入库，CI 重新生成
 .state/                   日志、截图、临时 dump、config_data.toml（gitignore）
 .data/                    枢纽数据库（**未入 git**，见坑 2）
@@ -417,6 +419,20 @@ time_window_keep = ["2026-11-02_1815"]
 没写 `session` 时回退到原来的按 date 匹配。**一天里出现第二场时，两篇日记都要显式写上 `session`**，否则先写的那篇会默默指错。
 
 自查：`python -c` 读 `dist/assets/data.js`，把 `diary` 的 `start/end/count` 和标题对一遍——两场同一天时数字应当不同。
+
+### 12. 录播字幕轨（extension/）的时间 0 是第一句翻译，不是开播整点（2026-11-11 新增）
+
+浏览器插件（看录播时叠双语字幕）的字幕数据由 `tools/export_subs.py` 生成，**直接读 `.data/translation_history.db` 全量**（12k+ 行 → 18 场），不经 `export.py` 的时段过滤——所以站点没收的白天场（11-06_0923 / 11-06_1134 / 11-07_1118）这里照样有字幕。
+
+关键约定：
+
+- `dist/subs/<场次>.json` 里 `[起, 止, 中文, 日文]` 的秒数，**0 = 本场第一句翻译的时刻**（`split_sessions` 的 start 就是第一条记录的 ts）。录播视频开头差的那几十秒由插件里的「对时」偏移补，不要在数据端硬凑。
+- 场次 key 与 `site/data/sessions/` 文件名同一套规则（`2026-11-11_0904`），两边能对上；但同一个 key 下**两边的秒数轴不同**（站点版从 `HH:MM:00` 起算，字幕版从第一句起算），别混用。
+- 碎句合并（间隔 <1.6s、≤42 字）与 ASR 重述去重（后句是前句超集则替换）都在导出时做完，插件端只做二分查找。
+- 稿件绑定：`site/data/videos.json`（`{"BV...": "场次key"}`）或简介里写 `HBS:<场次key>`；插件另有按发布时间倒推的兜底。
+- 插件从 `https://hibane-hinome.github.io/live-archive/subs/index.json` 取数据，index 缓存 3 小时；数据随 `publish.cmd --push` 自动上线，没有独立的更新通道。
+
+本地验证插件用 `extension/test/preview.html`（模拟 B 站结构，走本地 `dist/`），构建前先用 headless Chrome 截图确认渲染，再提交。
 
 ---
 

@@ -1,0 +1,364 @@
+/* 火羽 · 录播字幕 —— 字幕层 + 控制面板
+ *
+ * 全部用 hbs- 前缀，避免和 B 站自己的样式撞车。
+ * 字幕必须压在画面上，所以一律白字 + 深描边，不跟随站点主题。
+ */
+
+/* ------------------------------------------------------------ 字幕层 */
+
+.hbs-layer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: var(--hbs-bot, 9%);
+  z-index: 12;
+  display: flex;
+  justify-content: center;
+  padding: 0 5%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .14s ease-out;
+  --hbs-size: 30px;
+}
+
+.hbs-layer.is-on {
+  opacity: 1;
+}
+
+.hbs-box {
+  max-width: 92%;
+  text-align: center;
+  padding: .35em .9em .45em;
+  background: rgba(8, 9, 12, .58);
+  border-radius: .4em;
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+  font-family: "Noto Sans SC", "Source Han Sans SC", "PingFang SC",
+               "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+}
+
+.hbs-zh {
+  font-size: var(--hbs-size);
+  line-height: 1.34;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: .01em;
+  /* 四向硬描边：画面再亮字也不散 */
+  text-shadow:
+    -1.5px -1.5px 0 rgba(0, 0, 0, .82),
+    1.5px -1.5px 0 rgba(0, 0, 0, .82),
+    -1.5px 1.5px 0 rgba(0, 0, 0, .82),
+    1.5px 1.5px 0 rgba(0, 0, 0, .82),
+    0 0 6px rgba(0, 0, 0, .55),
+    0 2px 10px rgba(0, 0, 0, .45);
+  word-break: break-word;
+}
+
+.hbs-jp {
+  font-size: calc(var(--hbs-size) * 0.6);
+  line-height: 1.3;
+  font-weight: 500;
+  color: rgba(255, 255, 255, .92);
+  margin-bottom: .18em;
+  letter-spacing: .01em;
+  font-family: "Hiragino Sans", "Yu Gothic", "Noto Sans JP",
+               "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+  text-shadow:
+    -1px -1px 0 rgba(0, 0, 0, .8),
+    1px -1px 0 rgba(0, 0, 0, .8),
+    -1px 1px 0 rgba(0, 0, 0, .8),
+    1px 1px 0 rgba(0, 0, 0, .8),
+    0 0 5px rgba(0, 0, 0, .55);
+  word-break: break-word;
+}
+
+/* ------------------------------------------------------------ 抽屉面板 */
+
+.hbs-panel {
+  position: fixed;
+  right: 16px;
+  bottom: 92px;
+  z-index: 2147483000;
+  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #e9edf5;
+  text-align: left;
+}
+
+.hbs-panel * {
+  box-sizing: border-box;
+}
+
+/* 小球按钮 */
+.hbs-fab {
+  position: relative;
+  display: block;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 50%;
+  background: rgba(22, 24, 30, .82);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .35);
+  transition: transform .16s ease, background .16s ease;
+}
+
+.hbs-fab:hover {
+  transform: scale(1.06);
+  background: rgba(34, 37, 46, .92);
+}
+
+/* 有字幕时亮橙点，没有时灰点 */
+.hbs-fab i {
+  position: absolute;
+  right: 1px;
+  top: 1px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #5a6070;
+  box-shadow: 0 0 0 2px rgba(22, 24, 30, .9);
+}
+
+.hbs-panel.is-ok .hbs-fab i {
+  background: #ff8a3d;
+}
+
+.hbs-panel.is-open .hbs-fab {
+  transform: scale(.92);
+  opacity: .5;
+}
+
+/* 卡片 */
+.hbs-card {
+  position: absolute;
+  right: 0;
+  bottom: 52px;
+  width: 300px;
+  padding: 14px 14px 12px;
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 14px;
+  background: rgba(18, 20, 25, .94);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, .55);
+  display: none;
+}
+
+.hbs-panel.is-open .hbs-card {
+  display: block;
+}
+
+.hbs-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  color: #fff;
+}
+
+.hbs-x {
+  padding: 2px 6px;
+  border: 0;
+  background: none;
+  color: #8b93a5;
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.hbs-x:hover {
+  color: #fff;
+}
+
+.hbs-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.hbs-k {
+  flex: 0 0 34px;
+  color: #8b93a5;
+  font-size: 12px;
+}
+
+.hbs-sel {
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .05);
+  color: #e9edf5;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.hbs-sel option {
+  background: #1c1f26;
+  color: #e9edf5;
+}
+
+.hbs-hint {
+  margin: -4px 0 10px 42px;
+  color: #6f7788;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.hbs-hint-sel {
+  color: #9aa3b5;
+  margin-bottom: 12px;
+}
+
+.hbs-off {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.hbs-off button,
+.hbs-seg button {
+  height: 26px;
+  min-width: 32px;
+  padding: 0 7px;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, .05);
+  color: #cfd6e4;
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background .12s ease, color .12s ease;
+}
+
+.hbs-off button:hover,
+.hbs-seg button:hover {
+  background: rgba(255, 255, 255, .12);
+  color: #fff;
+}
+
+.hbs-offv {
+  min-width: 52px;
+  text-align: center;
+  color: #ff8a3d;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.hbs-seg {
+  display: flex;
+  gap: 4px;
+}
+
+.hbs-seg button.is-on {
+  border-color: rgba(255, 138, 61, .55);
+  background: rgba(255, 138, 61, .16);
+  color: #ffb37d;
+}
+
+.hbs-range {
+  flex: 1;
+  height: 3px;
+  margin: 0;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, .14);
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.hbs-range::-webkit-slider-thumb {
+  width: 13px;
+  height: 13px;
+  border: 0;
+  border-radius: 50%;
+  background: #ff8a3d;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.hbs-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, .07);
+}
+
+.hbs-switch {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #cfd6e4;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.hbs-switch input {
+  width: 13px;
+  height: 13px;
+  margin: 0;
+  accent-color: #ff8a3d;
+  cursor: pointer;
+}
+
+.hbs-diary {
+  color: #8b93a5;
+  font-size: 11px;
+  text-decoration: none;
+}
+
+.hbs-diary:hover {
+  color: #ff8a3d;
+}
+
+/* ------------------------------------------------------------ 提示条 */
+
+.hbs-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 15%;
+  transform: translate(-50%, 8px);
+  z-index: 2147483001;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(18, 20, 25, .92);
+  color: #fff;
+  font-size: 13px;
+  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .18s ease, transform .18s ease;
+}
+
+.hbs-toast.is-on {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hbs-layer,
+  .hbs-fab,
+  .hbs-toast {
+    transition: none;
+  }
+}

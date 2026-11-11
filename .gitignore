@@ -5,6 +5,10 @@ dist/
 # Python
 __pycache__/
 *.pyc
+# 翻译数据库：个人数据，不进仓库
+.data/
+# 插件本地测试用的视频（体积大，随时可用 ffmpeg 重新生成）
+extension/test/testsrc.mp4
 # 系统文件
 .DS_Store
 Thumbs.db

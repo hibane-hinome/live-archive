@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>录播字幕 · 本地预览</title>
+<link rel="stylesheet" href="../overlay.css">
+<style>
+  body { margin: 0; background: #101216; color: #cfd6e4;
+         font-family: "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif; }
+  .wrap { max-width: 980px; margin: 24px auto; padding: 0 16px; }
+  h1 { font-size: 15px; color: #e9edf5; margin: 0 0 4px; }
+  .sub { font-size: 12px; color: #8b93a5; margin-bottom: 14px; }
+  .player { position: relative; width: 100%; aspect-ratio: 16 / 9;
+            background: #000; border-radius: 10px; overflow: hidden; }
+  .player video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .ctrl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+          margin-top: 12px; font-size: 12px; }
+  .ctrl button { height: 28px; padding: 0 10px; border: 1px solid rgba(255,255,255,.14);
+                 border-radius: 7px; background: rgba(255,255,255,.06); color: #cfd6e4;
+                 font-size: 12px; font-family: inherit; cursor: pointer; }
+  .ctrl button:hover { background: rgba(255,255,255,.13); }
+  .ctrl select { height: 28px; border: 1px solid rgba(255,255,255,.14); border-radius: 7px;
+                 background: #1b1e25; color: #cfd6e4; font-size: 12px; }
+  .status { margin-top: 10px; padding: 8px 12px; border-radius: 8px;
+            background: rgba(255,255,255,.04); font-size: 12px; color: #8b93a5;
+            white-space: pre-wrap; }
+  .note { margin-top: 14px; font-size: 11.5px; color: #6f7788; line-height: 1.7; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>录播字幕 · 本地预览</h1>
+  <div class="sub">模拟 B 站播放器结构，字幕数据走本地 dist/。视频画面里的数字就是时间码（秒），用来核对字幕是否对上。</div>
+
+  <div class="player bpx-player-video-wrap">
+    <video id="v" src="./testsrc.mp4" autoplay muted loop playsinline></video>
+  </div>
+
+  <div class="ctrl">
+    <label>场次 <select id="pick"></select></label>
+    <button data-seek="45">跳到 0:45</button>
+    <button data-seek="300">跳到 5:00</button>
+    <button data-seek="900">跳到 15:00</button>
+    <button id="open">开/关面板</button>
+    <span id="clock" style="margin-left:auto;color:#ff8a3d;font-variant-numeric:tabular-nums;">0.0s</span>
+  </div>
+  <div class="status" id="status">…</div>
+
+  <div class="note">
+    验收点：跳到 0:45 应看到「那个啊……昨天晚上8点2分的时候……」（白天场第一句）；
+    画面左上角的时间码 ≈ 场次内秒数（偏移为 0 时），字幕应跟它对得上。
+  </div>
+</div>
+
+<script>
+  // 非扩展环境下 content.js 用 localStorage 存设置；把数据源指到本地 dist/
+  localStorage.setItem('hbs:settings', JSON.stringify({ base: location.origin + '/dist/' }));
+  localStorage.removeItem('hbs:manual');
+</script>
+<script src="../content.js"></script>
+<script>
+  const v = document.getElementById('v');
+  const status = document.getElementById('status');
+  const pick = document.getElementById('pick');
+  const clock = document.getElementById('clock');
+  const dbgMsgs = [];
+  function dbg(m) { dbgMsgs.push(m); }
+
+  function api() { return window.__HBS_API__; }
+
+  let filled = false;
+  function fillPick() {
+    const idx = api() && api().state.index;
+    if (!idx || filled) return;
+    filled = true;
+    idx.sessions.slice().reverse().forEach(s => {
+      const o = document.createElement('option');
+      o.value = s.key;
+      o.textContent = s.label + ' · ' + s.blocks + '句';
+      pick.appendChild(o);
+    });
+    const want = q.get('key') || '2026-11-11_0904';
+    pick.value = want;
+    api().state.manualKey = want;
+    api().refresh();
+  }
+
+  setInterval(() => {
+    clock.textContent = v.currentTime.toFixed(1) + 's';
+    if (!api()) return;
+    fillPick();
+    const c = api().current();
+    const st = api().state;
+    status.textContent =
+      '场次: ' + (st.trackKey || '—') + '   匹配: ' + (st.how || '—') +
+      '\nblocks=' + st.blocks.length + ' paused=' + st.paused + ' raf=' + st.raf +
+      '\n当前句[' + c.i + ']: ' + (c.block ? c.block[2] : '(无)') +
+      '\n原文: ' + (c.block ? c.block[3] : '—') +
+      (dbgMsgs.length ? '\n' + dbgMsgs.join('\n') : '');
+  }, 300);
+
+  document.querySelectorAll('[data-seek]').forEach(b => {
+    b.addEventListener('click', () => { v.currentTime = parseFloat(b.dataset.seek); });
+  });
+  document.getElementById('open').addEventListener('click', () => {
+    document.querySelector('.hbs-panel').classList.toggle('is-open');
+  });
+  pick.addEventListener('change', () => {
+    api().state.manualKey = pick.value;
+    api().refresh();
+  });
+
+  // 截图/自动化用：?key=场次&t=秒&panel=1&noraf=1&flat=1
+  const q = new URLSearchParams(location.search);
+  if (q.get('flat')) {
+    const s = document.createElement('style');
+    s.textContent = '*{transition:none!important;animation:none!important}';
+    document.head.appendChild(s);
+  }
+  if (q.get('key')) {
+    const wait = setInterval(() => {
+      if (api() && api().state.index) {
+        clearInterval(wait);
+        api().state.manualKey = q.get('key');
+        api().refresh();
+        pick.value = q.get('key');
+      }
+    }, 200);
+  }
+  if (q.get('t')) {
+    // headless 的虚拟时间不走媒体时钟，noraf 模式下直接命令字幕层渲染
+    const t = parseFloat(q.get('t'));
+    if (q.get('noraf')) {
+      const wait2 = setInterval(() => {
+        if (api() && api().state.blocks.length) {
+          clearInterval(wait2);
+          api().stopLoop();
+          const i = api().renderAt(t);
+          const bl = api().state.blocks;
+          dbg('renderAt(' + t + ') → i=' + i + ' offset=' + api().state.offset +
+              ' blocks=' + bl.length + ' b0=' + JSON.stringify(bl[0]).slice(0, 80));
+          if (q.has('panel')) document.querySelector('.hbs-panel').classList.add('is-open');
+        }
+      }, 150);
+    } else {
+      v.addEventListener('loadedmetadata', () => { v.currentTime = t; }, { once: true });
+      v.currentTime = t;
+      if (q.has('pause')) v.pause();
+    }
+  }
+</script>
+</body>
+</html>

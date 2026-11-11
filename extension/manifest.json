@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "火羽 · 录播字幕",
+  "short_name": "录播字幕",
+  "version": "0.1.0",
+  "description": "看录播时叠上直播当时的双语字幕：日文原文 + 中文翻译，逐句跟着画面走。",
+  "permissions": ["storage", "activeTab"],
+  "host_permissions": [
+    "https://hibane-hinome.github.io/*",
+    "https://raw.githubusercontent.com/*",
+    "https://www.bilibili.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "火羽 录播字幕",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://www.bilibili.com/video/*", "*://www.bilibili.com/list/*"],
+      "js": ["content.js"],
+      "css": ["overlay.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}

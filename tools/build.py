@@ -14,6 +14,7 @@ from datetime import datetime, timedelta, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import common
+import export_subs
 
 COPY = ['index.html', 'assets/app.js', 'assets/style.css', 'brand']
 
@@ -207,8 +208,13 @@ def main():
         f.write(html)
     open(os.path.join(dist, '.nojekyll'), 'w').close()
 
+    # 浏览器插件用的双语字幕轨，跟站点同域发布，插件直接按 URL 取。
+    # 这份直接读翻译数据库，不受上面 23:30-01:30 的场次筛选影响，白天场也有字幕。
+    n_subs, n_blocks, sub_bytes = export_subs.emit_from_db(cfg, dist, site_dir, data['meta']['built'])
+
     print('dist: %d 场 / %d 条 / %d 段摘录 / %d 篇日记 · data.js %d KB · v=%s'
           % (len(sess_out), len(recs_out), len(q_out), len(diary_out), len(js.encode('utf-8')) // 1024, ver))
+    print('subs: %d 场字幕 / %d 块 / %d KB' % (n_subs, n_blocks, sub_bytes // 1024))
     if skipped:
         print('!! 找不到对应场次的摘录:', ', '.join(skipped))
     if skipped_diary:
