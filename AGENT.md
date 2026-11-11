@@ -426,12 +426,12 @@ time_window_keep = ["2026-11-02_1815"]
 
 关键约定：
 
-- `dist/subs/<场次>.json` 里 `[起, 止, 中文, 日文]` 的秒数，**0 = 本场第一句翻译的时刻**（`split_sessions` 的 start 就是第一条记录的 ts）。录播视频开头差的那几十秒由插件里的「对时」偏移补，不要在数据端硬凑。
+- `dist/subs/<场次>.json` 里 `[起, 止, 中文, 日文]` 的秒数，**0 = 本场第一句话开口的时刻**（2026-11-11 晚修正；以前是第一句翻译入库的时刻）。录播视频开头差的那几十秒由插件里的「对时」偏移补，不要在数据端硬凑。
 - 场次 key 与 `site/data/sessions/` 文件名同一套规则（`2026-11-11_0904`），两边能对上；但同一个 key 下**两边的秒数轴不同**（站点版从 `HH:MM:00` 起算，字幕版从第一句起算），别混用。
 - 碎句合并（间隔 <1.6s、≤42 字）与 ASR 重述去重（后句是前句超集则替换）都在导出时做完，插件端只做二分查找。
 - 稿件绑定：`site/data/videos.json`（`{"BV...": "场次key"}`）或简介里写 `HBS:<场次key>`；插件另有按发布时间倒推的兜底。
 - 插件从 `https://hibane-hinome.github.io/live-archive/subs/index.json` 取数据，index 缓存 3 小时；数据随 `publish.cmd --push` 自动上线，没有独立的更新通道。
-- **时间戳精度**（2026-11-11 晚新增）：db 里 `Timestamp` 是翻译**回来**的时刻，比开口晚约 1 秒（实测：VAD 静音 0.4s + ASR 0.4s + 翻译 0.3s，见 `.state/lag_stats.py`）。LiveTranslate 已加 `SpeechStart`/`Duration`/`LagMs` 三列（开口时刻/说话时长/链路延迟，旧行 NULL），`export_subs.load_timing()` 有精确值就逐句用，没有就退回 Timestamp；index/单场里的 `precise` 标记这场是哪种。插件对没对过时的稿件按 `precise===false` 默认 -1s 补偿。**别给历史数据统一平移**——延迟逐句不同，常数修正会被 0 点吸收，等于没修；精确对齐只能靠新列。
+- **时间戳锚点**（2026-11-11 晚，两轮修正后的最终结论）：db 里 `Timestamp` 是翻译**回来**的时刻，它锚在说话的**结束**上——说完到入库中位 0.75s（VAD 静音 + 翻译往返），而**开口**到入库中位 4.3s，差值正好是句子本身的时长。所以老数据拿 Timestamp 当字幕起点平均晚 4.3s，且长句比短句晚得更多，**常数对时救不回来**。修正：老场次（无 SpeechStart）按 `结束 − 0.75s − 估时长` 反推开口，估时长用日文字数 ÷ 5.88 字/秒（全库实测中位）；实测对 3690 句验证，偏离真实开口从中位 4.32s 降到 0.68s（ unbiased −0.09s）。统计与验证脚本在 `.state/anchor_stats.py`、`.state/anchor_gain.py`、`.state/dur_est.py`。LiveTranslate 新版直接写 `SpeechStart`/`Duration`/`LagMs` 三列（旧行 NULL），有精确值就逐句用；index/单场里的 `precise` 标记这场是哪种。插件对老场次**不再默认偏移**（修正已在导出端做掉），面板提示「时间为估算（误差约 0.7 秒）」。**别给老数据统一平移**——晚的量随句长变化，常数修正会被 0 点吸收。
 
 本地验证插件用 `extension/test/preview.html`（模拟 B 站结构，走本地 `dist/`），构建前先用 headless Chrome 截图确认渲染，再提交。
 

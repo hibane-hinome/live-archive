@@ -18,8 +18,16 @@
 本地有库就重算并落盘（这份进 git），CI 没库就把已入库的直接复制进 dist/。
 跟 site/data/sessions/ 是同一套思路。
 
-时间轴是"距本场开播多少秒"。录播视频的 0:00 通常不等于开播时刻（OBS 提前开录、
-投稿从黑屏切起），差多少由插件里的偏移量补，这里不做假设。
+时间轴是「距本场第一句话开口多少秒」，不是「距开播」。时间戳两种来源：
+
+  新场次（LiveTranslate 已记 SpeechStart/Duration）——直接用真实开口时刻和说话时长；
+  老场次——db 里的 Timestamp 是「翻译回到本地」的时刻，锚在说话的**结束**上
+  （实测：说完到入库中位 0.75 秒，而开口到入库中位 4.3 秒，差值正好等于句子本身的
+  长度）。所以老数据要减掉尾巴、再减掉这句话说了多久（按字数估，语速取自全库实测），
+  否则字幕永远慢半句，而且长句比短句慢得更多——常数对时救不回来。
+
+录播视频的 0:00 通常也不等于开播时刻（OBS 提前开录、投稿从黑屏切起），差多少由
+插件里的偏移量补，这里不做假设。
 """
 import json
 import os
@@ -41,10 +49,21 @@ MERGE_GAP = 1.6
 MERGE_MAX = 42
 # 一块最长覆盖多少秒，防止一口气不停地说时整段粘成一块
 MERGE_SPAN = 14.0
-# 没有下一句接着时，一块按字数估个停留时间
+# 没有真实时长时，一块按字数估个停留时间
 HOLD_MIN, HOLD_MAX, HOLD_CPS = 1.0, 6.0, 6.0
 # 前缀重合到这个长度，就认为后一句是 ASR 在重述同一句
 DUP_PREFIX = 6
+
+# 老数据的 Timestamp 不是「开口时刻」，是「翻译回到本地」的时刻——它锚在说话的**结束**：
+# VAD 等静音 0.4s + 翻译往返 0.3s，实测 3690 句的中位是 0.75s 之后。
+# 换句话说，老时间戳 ≈ 这句话说完之后 0.75 秒。拿它当字幕起点，平均晚 4.3 秒
+# （晚的量正好等于句子本身的长度），而且长句比短句晚得更多——所以常数对时救不回来。
+END_TAIL = 0.75
+# 日文语速，字/秒（全库 7873 段的实测中位）。用它把老数据的句子时长估出来再往回推，
+# 偏离真实开口从中位 4.3 秒降到 0.68 秒，比把时长当 0（误差 2.9 秒）好得多。
+CPS = 5.88
+# 说完之后字幕多留一会儿再撤，别在字音刚停的瞬间消失
+LINGER = 0.4
 
 
 def _clean_zh(text):
@@ -58,12 +77,21 @@ def _clean_zh(text):
     return text.strip()
 
 
+def _est_dur(jp, zh):
+    """老数据没有时长，按字数估一个（日语原文优先，实在没有就用中文）。"""
+    n = len(re.sub(r'\s+', '', jp or '')) or len(re.sub(r'\s+', '', zh or ''))
+    return max(0.8, min(9.0, n / CPS))
+
+
 def _blocks(records, start_ts, timing=None):
     """碎句 → 字幕块。records 是 (时间戳, 日文, 中文)，返回 [[起, 止, 中文, 日文], ...]。
 
-    timing 给的是每句「开口时刻 + 说话时长」（新版 LiveTranslate 才写这两列）。
-    有它就按真实时间摆，字幕和人声严丝合缝；没有就退回 Timestamp —— 那是翻译
-    回来的时刻，比开口晚约 1 秒（实测 VAD 静音 0.4 + ASR 0.4 + 翻译 0.3）。
+    timing 给的是每句「开口时刻 + 说话时长」（新版 LiveTranslate 才写这两列），
+    有它就按真实时间摆，字幕和人声严丝合缝。
+
+    没有的话，Timestamp 只能当「说完的时刻」用：它比说话结束晚约 0.75 秒，
+    比说话开始晚约一整句的时长。所以要让字幕对上人声，得先减掉尾巴、再减掉
+    这句话说了多久——后者只能按字数估。
     """
     timing = timing or {}
     items = []  # [起, 止(可为 None), 中文, 日文]
@@ -73,9 +101,24 @@ def _blocks(records, start_ts, timing=None):
         if not zh:
             continue
         t0, dur = timing.get((int(ts), jp), (None, None))
-        start = max(0.0, (t0 - start_ts) if t0 else float(ts - start_ts))
-        end = (start + dur) if dur else None
+        if t0:
+            start = max(0.0, t0 - start_ts)
+            end = start + dur
+        else:
+            d = _est_dur(jp, zh)
+            end = float(ts - start_ts) - END_TAIL
+            start = end - d
         items.append([start, end, zh, jp])
+
+    # 时间轴 0 点定在「第一句话开口」，不是「第一条入库记录」：后者要等这句话说完、
+    # 翻完才写下，比开口晚好几秒，留着它第一句就会被挤到 0 之前（两句都落在 0 秒）。
+    # 整场一起平移，句与句的相对位置一点不动。
+    if items:
+        base = min(x[0] for x in items)
+        if base < 0:
+            for x in items:
+                x[0] -= base
+                x[1] -= base
 
     # 翻译是异步回来的，先说完的句子不一定先入库；按开口时刻重排一遍，
     # 否则字幕会串行（有精确时间戳时才看得出来，老数据本来就是按时间排的）。

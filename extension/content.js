@@ -486,8 +486,9 @@
       hintEl.textContent = st.indexErr ? ('字幕数据取不到：' + st.indexErr) : '正在取字幕数据…';
     } else if (st.blocks.length) {
       var sess = (idx.sessions || []).filter(function (s) { return s.key === st.trackKey; })[0];
-      // 老数据的时间戳是翻译回来的时刻，比开口晚约 1 秒，明说一句省得用户以为坏了
-      var lag = (sess && sess.precise === false) ? ' · 时间按入库估的（约晚 1 秒）' : '';
+      // 老场次没有真实说话时间，是按字数估的（导出时就已修正过，误差中位 0.7 秒），
+      // 说一句省得用户拿它当坏掉的证据
+      var lag = (sess && sess.precise === false) ? ' · 时间为估算（误差约 0.7 秒）' : '';
       hintEl.textContent = (sess ? sess.label : st.trackKey) + ' · ' +
         st.blocks.length + ' 句 · ' + st.how + lag;
     } else if (st.key) {
@@ -550,10 +551,10 @@
         if (typeof v[k] === 'number') {
           st.offset = v[k];
         } else {
-          // 没手动对过时给个起步值：老数据的时间戳是「翻译回来」的时刻，
-          // 比开口晚约 1 秒（实测 VAD 静音 0.4 + ASR 0.4 + 翻译 0.3），
-          // 默认往前推一点；带开口时刻的新场次则不需要补偿。
-          st.offset = (hit.s && hit.s.precise === false) ? -1 : 0;
+          // 老数据的时间轴已经在导出时修正过（时间戳是「说完」而非「开口」，
+          // 那边减掉了尾巴并按字数估了时长），这里不再叠一层补偿，
+          // 只留录播本身与开播时刻的差值，让用户自己推。
+          st.offset = 0;
         }
         if (!st.manualKey && v['pick:' + (info.bvid || 'x')]) {
           st.manualKey = v['pick:' + (info.bvid || 'x')];
