@@ -431,6 +431,7 @@ time_window_keep = ["2026-11-02_1815"]
 - 碎句合并（间隔 <1.6s、≤42 字）与 ASR 重述去重（后句是前句超集则替换）都在导出时做完，插件端只做二分查找。
 - 稿件绑定：`site/data/videos.json`（`{"BV...": "场次key"}`）或简介里写 `HBS:<场次key>`；插件另有按发布时间倒推的兜底。
 - 插件从 `https://hibane-hinome.github.io/live-archive/subs/index.json` 取数据，index 缓存 3 小时；数据随 `publish.cmd --push` 自动上线，没有独立的更新通道。
+- **时间戳精度**（2026-11-11 晚新增）：db 里 `Timestamp` 是翻译**回来**的时刻，比开口晚约 1 秒（实测：VAD 静音 0.4s + ASR 0.4s + 翻译 0.3s，见 `.state/lag_stats.py`）。LiveTranslate 已加 `SpeechStart`/`Duration`/`LagMs` 三列（开口时刻/说话时长/链路延迟，旧行 NULL），`export_subs.load_timing()` 有精确值就逐句用，没有就退回 Timestamp；index/单场里的 `precise` 标记这场是哪种。插件对没对过时的稿件按 `precise===false` 默认 -1s 补偿。**别给历史数据统一平移**——延迟逐句不同，常数修正会被 0 点吸收，等于没修；精确对齐只能靠新列。
 
 本地验证插件用 `extension/test/preview.html`（模拟 B 站结构，走本地 `dist/`），构建前先用 headless Chrome 截图确认渲染，再提交。
 

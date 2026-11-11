@@ -486,7 +486,10 @@
       hintEl.textContent = st.indexErr ? ('字幕数据取不到：' + st.indexErr) : '正在取字幕数据…';
     } else if (st.blocks.length) {
       var sess = (idx.sessions || []).filter(function (s) { return s.key === st.trackKey; })[0];
-      hintEl.textContent = (sess ? sess.label : st.trackKey) + ' · ' + st.blocks.length + ' 句 · ' + st.how;
+      // 老数据的时间戳是翻译回来的时刻，比开口晚约 1 秒，明说一句省得用户以为坏了
+      var lag = (sess && sess.precise === false) ? ' · 时间按入库估的（约晚 1 秒）' : '';
+      hintEl.textContent = (sess ? sess.label : st.trackKey) + ' · ' +
+        st.blocks.length + ' 句 · ' + st.how + lag;
     } else if (st.key) {
       hintEl.textContent = '这场还没字幕数据';
     } else {
@@ -544,7 +547,14 @@
       }
       var k = 'offset:' + (info.bvid || hit.s.key);
       return storeGet([k, 'pick:' + (info.bvid || 'x')]).then(function (v) {
-        st.offset = typeof v[k] === 'number' ? v[k] : 0;
+        if (typeof v[k] === 'number') {
+          st.offset = v[k];
+        } else {
+          // 没手动对过时给个起步值：老数据的时间戳是「翻译回来」的时刻，
+          // 比开口晚约 1 秒（实测 VAD 静音 0.4 + ASR 0.4 + 翻译 0.3），
+          // 默认往前推一点；带开口时刻的新场次则不需要补偿。
+          st.offset = (hit.s && hit.s.precise === false) ? -1 : 0;
+        }
         if (!st.manualKey && v['pick:' + (info.bvid || 'x')]) {
           st.manualKey = v['pick:' + (info.bvid || 'x')];
         }
