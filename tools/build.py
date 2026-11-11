@@ -110,11 +110,19 @@ def main():
         })
 
     # 日记也按 date 找场次；文件顺序即展示顺序（最新的写在最前）
+    # 同一天有两场（比如凌晨场 + 白天场）时，光看 date 会全部绑到当天第一场，
+    # 所以日记里可以写 "session": "2026-11-11_0904" 显式指定场次文件。
+    by_file = {s['_file']: i for i, s in enumerate(sessions)}
     skipped_diary, diary_out = [], []
     for d in diary_raw:
-        hit = next((s for s in sess_out if s['date'] == d['date']), None)
+        want = (d.get('session') or '').strip()
+        wid = by_file.get(want + '.json') if want else None
+        if wid is not None:
+            hit = sess_out[wid]
+        else:
+            hit = next((s for s in sess_out if s['date'] == d['date']), None)
         if not hit:
-            skipped_diary.append(d['date'])
+            skipped_diary.append(d['date'] + (' / ' + want if want else ''))
             continue
         diary_out.append({
             's': hit['id'], 'date': hit['date'], 'dateLong': hit['dateLong'],
