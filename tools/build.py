@@ -88,6 +88,8 @@ def main():
     for i, s in enumerate(sessions):
         sess_out.append({
             'id': i,
+            # 场次文件名（2026-11-11_0904）：日记详情页用它做路由，比递增 id 稳
+            'key': os.path.basename(s['_file'])[:-5],
             'date': s['date'], 'dateLong': s['dateLong'], 'week': s['week'],
             'start': s['start'], 'end': s['end'], 'dur': s['dur'], 'count': s['count'],
             'topics': s['topics'], 'ribbon': s['ribbon'], 'segs': s['segs'],
@@ -125,10 +127,14 @@ def main():
             skipped_diary.append(d['date'] + (' / ' + want if want else ''))
             continue
         diary_out.append({
-            's': hit['id'], 'date': hit['date'], 'dateLong': hit['dateLong'],
+            's': hit['id'], 'key': hit['key'],
+            'date': hit['date'], 'dateLong': hit['dateLong'],
             'week': hit['week'], 'start': hit['start'], 'end': hit['end'],
             'dur': hit['dur'], 'count': hit['count'],
-            'title': d['title'], 'tagline': d.get('tagline', ''), 'body': d['body'],
+            'title': d['title'], 'tagline': d.get('tagline', ''),
+            # 列表页只显示 summary（一两句），全文放在详情页
+            'summary': d.get('summary', ''),
+            'body': d['body'],
         })
 
     data = {

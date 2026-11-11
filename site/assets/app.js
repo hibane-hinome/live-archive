@@ -134,7 +134,13 @@
         query[decodeURIComponent(p[0])] = decodeURIComponent(p[1] || '');
       });
     }
-    return { view: seg[0] || 'home', sid: seg[1] != null ? parseInt(seg[1], 10) : null, q: query };
+    return {
+      view: seg[0] || 'home',
+      // 第二段原样保留：存档用数字 id，日记用场次文件名（2026-11-11_0904）
+      seg1: seg[1] != null ? decodeURIComponent(seg[1]) : null,
+      sid: seg[1] != null ? parseInt(seg[1], 10) : null,
+      q: query
+    };
   }
 
   function setNav(view) {
@@ -149,7 +155,7 @@
     state.hideEmpty = false;
     if (r.view === 'quotes') { setNav('quotes'); renderQuotes(); }
     else if (r.view === 'archive') { setNav('archive'); renderArchive(r.sid, r.q.t); }
-    else if (r.view === 'diary') { setNav('diary'); renderDiary(); }
+    else if (r.view === 'diary') { setNav('diary'); renderDiary(r.seg1); }
     else if (r.view === 'about') { setNav('about'); renderAbout(); }
     else { setNav('home'); renderHome(); }
     window.scrollTo(0, 0);
@@ -338,7 +344,7 @@
               '<aside class="dside">' +
                 '<div class="ds-head">更早的日记</div>' +
                 (D.diary.slice(1, 6).map(function (d) {
-                  return '<a class="ds-item" href="#/diary">' +
+                  return '<a class="ds-item" href="' + diaryHref(d) + '">' +
                     '<em>' + esc(d.date.replace('-', '.')) + '</em>' +
                     '<b>' + esc(d.title) + '</b></a>';
                 }).join('') || '<span class="ds-empty">这是第一篇。</span>') +
@@ -367,23 +373,37 @@
   }
 
   /* ---------- diary ---------- */
-  function latestDiaryCard(d) {
+  function diaryInfo(d) {
     var qn = D.quotes.filter(function (q) { return q.s === d.s; }).length;
+    return esc(d.start) + ' – ' + esc(d.end) + ' · ' + d.dur + ' 分钟 · ' + d.count + ' 条记录' +
+      (qn ? ' · ' + qn + ' 段摘录' : '');
+  }
+
+  function diaryHref(d) {
+    return '#/diary/' + encodeURIComponent(d.key);
+  }
+
+  function latestDiaryCard(d) {
     return '<article class="dcard">' +
       '<div class="dhead">' +
         '<div class="ddate">' + esc(d.dateLong) + ' <em>' + esc(d.week) + '</em></div>' +
-        '<div class="dinfo">' + esc(d.start) + ' – ' + esc(d.end) + ' · ' + d.count + ' 条记录' +
-          (qn ? ' · ' + qn + ' 段摘录' : '') + '</div>' +
+        '<div class="dinfo">' + diaryInfo(d) + '</div>' +
       '</div>' +
       '<h3 class="dtitle">' + esc(d.title) + '</h3>' +
       (d.tagline ? '<div class="dtag">' + esc(d.tagline) + '</div>' : '') +
-      '<p class="dexcerpt">' + esc(d.body[0] || '') + '</p>' +
-      '<div class="dlinks"><a href="#/diary">读全文 →</a><a href="#/archive/' + d.s + '">逐字稿 →</a></div>' +
+      '<p class="dexcerpt">' + esc(d.summary || d.body[0] || '') + '</p>' +
+      '<div class="dlinks"><a href="' + diaryHref(d) + '">读全文 →</a>' +
+        '<a href="#/archive/' + d.s + '">逐字稿 →</a></div>' +
     '</article>';
   }
 
-  function renderDiary() {
+  function renderDiary(key) {
     var list = D.diary || [];
+    var one = key ? list.filter(function (d) { return d.key === key; })[0] : null;
+    // 键对不上（旧链接、手改过的地址）就退回列表，别给一个空页面
+    if (key && !one) { location.replace('#/diary'); return; }
+    if (one) { renderDiaryPage(one); return; }
+
     var pages = Math.max(1, Math.ceil(list.length / DPAGE));
     if (state.dpage < 1 || state.dpage > pages) state.dpage = 1;
     var from = (state.dpage - 1) * DPAGE;
@@ -397,8 +417,8 @@
         '<div class="hero-copy">' +
           '<div class="kicker">STREAM DIARY</div>' +
           '<h1>今日<span class="thin">，</span>播了<span class="accent">什么</span></h1>' +
-          '<p class="lead">每场直播后整理的记录摘要：聊了什么、回应了谁、讲了哪些冷知识。' +
-          '只做事实性归纳，不做评价；日记之外随时可以点进对应场次的逐字稿核对原文。当前共 ' +
+          '<p class="lead">每场直播之后写一篇：聊了什么、回应了谁、讲了哪些冷知识。' +
+          '这里每条只放一段摘要，点进去才是全文；日记之外随时可以点进对应场次的逐字稿核对原文。当前共 ' +
           list.length + ' 篇。</p>' +
         '</div>' +
       '</section>' +
@@ -410,19 +430,59 @@
     setFoot();
   }
 
+  // 列表里的一条：日期 / 场次信息 / 标题 / 摘要，点整块进全文
   function diaryEntry(d) {
-    var qn = D.quotes.filter(function (q) { return q.s === d.s; }).length;
-    return '<article class="dentry">' +
+    var sum = d.summary || d.body[0] || '';
+    return '<a class="dentry dmini" href="' + diaryHref(d) + '">' +
       '<div class="dhead">' +
         '<div class="ddate">' + esc(d.dateLong) + ' <em>' + esc(d.week) + '</em></div>' +
-        '<div class="dinfo">' + esc(d.start) + ' – ' + esc(d.end) + ' · ' + d.dur + ' 分钟 · ' + d.count + ' 条记录' +
-          (qn ? ' · ' + qn + ' 段摘录' : '') + '</div>' +
+        '<div class="dinfo">' + diaryInfo(d) + '</div>' +
       '</div>' +
       '<h3 class="dtitle">' + esc(d.title) + '</h3>' +
       (d.tagline ? '<div class="dtag">' + esc(d.tagline) + '</div>' : '') +
-      '<div class="dbody">' + d.body.map(function (p) { return '<p>' + esc(p) + '</p>'; }).join('') + '</div>' +
-      '<div class="dlinks"><a href="#/archive/' + d.s + '">看这一场的逐字稿 →</a></div>' +
-    '</article>';
+      '<p class="dsum">' + esc(sum) + '</p>' +
+      '<div class="dlinks"><span class="dmore">读全文 →</span>' +
+        '<span class="dcount">' + d.body.length + ' 段</span></div>' +
+    '</a>';
+  }
+
+  // 详情页：全文 + 场次信息 + 上下篇，正文按段落排
+  function renderDiaryPage(d) {
+    var i = D.diary.indexOf(d);
+    var newer = i > 0 ? D.diary[i - 1] : null;
+    var older = i < D.diary.length - 1 ? D.diary[i + 1] : null;
+
+    var body = d.body.map(function (p) { return '<p>' + esc(p) + '</p>'; }).join('');
+    var nav =
+      '<nav class="dnav">' +
+        (older
+          ? '<a class="dnav-i" href="' + diaryHref(older) + '"><em>更早一篇</em><b>' + esc(older.title) + '</b></a>'
+          : '<span class="dnav-i dnav-off"></span>') +
+        (newer
+          ? '<a class="dnav-i dnav-r" href="' + diaryHref(newer) + '"><em>更新一篇</em><b>' + esc(newer.title) + '</b></a>'
+          : '<span class="dnav-i dnav-off"></span>') +
+      '</nav>';
+
+    app.innerHTML =
+      '<section class="hero hero-sm">' +
+        '<div class="hero-copy">' +
+          '<a class="back" href="#/diary">← 全部日记</a>' +
+          '<div class="kicker">STREAM DIARY</div>' +
+          '<h1 class="dtitle-lg">' + esc(d.title) + '</h1>' +
+          (d.tagline ? '<p class="lead">' + esc(d.tagline) + '</p>' : '') +
+          '<div class="dinfo dmeta-row">' + esc(d.dateLong) + ' <em>' + esc(d.week) + '</em> · ' + diaryInfo(d) + '</div>' +
+        '</div>' +
+      '</section>' +
+      '<article class="dfull">' +
+        '<div class="dbody">' + body + '</div>' +
+        '<div class="dlinks">' +
+          '<a href="#/archive/' + d.s + '">这一场的逐字稿 →</a>' +
+          '<a href="#/diary">全部日记</a>' +
+        '</div>' +
+      '</article>' +
+      nav;
+
+    setFoot();
   }
 
   function sessionCard(s) {
