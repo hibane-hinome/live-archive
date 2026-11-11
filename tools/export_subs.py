@@ -11,8 +11,12 @@
 比站点多出的意义：站点只收 23:30-01:30 开播的场次（白天场要手工加白名单），
 而字幕轨按数据库全量切，白天场照样有字幕。
 
-  dist/subs/index.json      场次目录 + 稿件映射（插件启动只拉这一个）
-  dist/subs/<场次>.json     单场字幕块 [[起, 止, 中文, 日文], ...]
+  site/data/subs/index.json      场次目录 + 稿件映射（插件启动只拉这一个）
+  site/data/subs/<场次>.json     单场字幕块 [[起, 止, 中文, 日文], ...]
+
+落在 site/data/ 而不是直接写 dist/，是因为 dist/ 不入库、CI 也拿不到数据库：
+本地有库就重算并落盘（这份进 git），CI 没库就把已入库的直接复制进 dist/。
+跟 site/data/sessions/ 是同一套思路。
 
 时间轴是"距本场开播多少秒"。录播视频的 0:00 通常不等于开播时刻（OBS 提前开录、
 投稿从黑屏切起），差多少由插件里的偏移量补，这里不做假设。
@@ -20,6 +24,7 @@
 import json
 import os
 import re
+import shutil
 import sys
 from datetime import datetime, timedelta, timezone
 
@@ -160,12 +165,51 @@ def load_diary(site_dir):
 
 
 def emit_from_db(cfg, dist_dir, site_dir, stamp=''):
-    """构建入口：数据库 → dist/subs/。返回 (场次数, 块数, 总字节)。"""
-    return emit(load_sessions(cfg), dist_dir, site_dir, stamp)
+    """构建入口，返回 (场次数, 块数, 总字节)。
+
+    数据库在就跑一遍重算，落盘 site/data/subs/（这份进 git）；数据库不在（CI 环境）
+    就直接用已入库的那份。两种情况最后都复制进 dist/subs/ 随 Pages 发布。
+    """
+    src_dir = os.path.join(site_dir, 'data', 'subs')
+    db = cfg['source']['db']
+
+    if os.path.exists(db):
+        n, blocks, size = emit(load_sessions(cfg), src_dir, site_dir, stamp)
+        if n == 0:
+            # 库读到了却切不出场次（多半是空库/被锁），宁可延用旧数据也不要把线上打空
+            print('!! 数据库切不出场次，本次沿用 site/data/subs 里的旧字幕', file=sys.stderr)
+            n, blocks, size = _stat(src_dir)
+    elif os.path.isdir(src_dir):
+        n, blocks, size = _stat(src_dir)
+        print('   没有数据库，沿用 site/data/subs 里已入库的 %d 场字幕' % n)
+    else:
+        print('!! 既没有数据库也没有 site/data/subs，跳过字幕轨', file=sys.stderr)
+        return 0, 0, 0
+
+    _copy_to(src_dir, os.path.join(dist_dir, 'subs'))
+    return n, blocks, size
 
 
-def emit(sessions, dist_dir, site_dir, stamp=''):
-    out_dir = os.path.join(dist_dir, 'subs')
+def _stat(src_dir):
+    """读已入库的 index.json，得到 (场次数, 块数, 总字节)。"""
+    idx = os.path.join(src_dir, 'index.json')
+    if not os.path.exists(idx):
+        return 0, 0, 0
+    with open(idx, encoding='utf-8') as f:
+        meta = json.load(f)
+    size = sum(os.path.getsize(os.path.join(src_dir, name))
+               for name in os.listdir(src_dir) if name.endswith('.json'))
+    return int(meta.get('count', 0)), int(meta.get('blocks', 0)), size
+
+
+def _copy_to(src_dir, dst_dir):
+    os.makedirs(dst_dir, exist_ok=True)
+    for name in os.listdir(src_dir):
+        if name.endswith('.json'):
+            shutil.copy2(os.path.join(src_dir, name), os.path.join(dst_dir, name))
+
+
+def emit(sessions, out_dir, site_dir, stamp=''):
     os.makedirs(out_dir, exist_ok=True)
 
     diary = load_diary(site_dir)
@@ -217,16 +261,29 @@ def emit(sessions, dist_dir, site_dir, stamp=''):
     }
     with open(os.path.join(out_dir, 'index.json'), 'w', encoding='utf-8', newline='\n') as f:
         f.write(json.dumps(meta, ensure_ascii=False, separators=(',', ':')) + '\n')
+
+    # 场次被合并或删掉后，旧文件若留在入库目录里会被一起发出去，顺手清掉
+    keep = {x['file'] for x in index} | {'index.json'}
+    for name in os.listdir(out_dir):
+        if name.endswith('.json') and name not in keep:
+            os.remove(os.path.join(out_dir, name))
+            print('   清掉过期字幕：%s' % name)
+
     return len(index), total_blocks, total_bytes
 
 
 def main():
+    """手动重算一次，落盘 site/data/subs/；dist 在的话顺便同步过去。"""
     cfg = common.load_config()
-    dist = cfg['site']['dist']
-    if not os.path.isdir(dist):
-        print('!! dist 还不存在，先跑 tools/build.py', file=sys.stderr)
+    site, dist = cfg['site']['dir'], cfg['site']['dist']
+    if not os.path.exists(cfg['source']['db']):
+        print('!! 找不到数据库，没法重算字幕：%s' % cfg['source']['db'], file=sys.stderr)
         return 1
-    n, blocks, size = emit_from_db(cfg, dist, cfg['site']['dir'])
+    src = os.path.join(site, 'data', 'subs')
+    n, blocks, size = emit(load_sessions(cfg), src, site,
+                           datetime.now(TZ).strftime('%Y.%m.%d %H:%M'))
+    if os.path.isdir(dist):
+        _copy_to(src, os.path.join(dist, 'subs'))
     print('subs: %d 场 / %d 块 / %d KB' % (n, blocks, size // 1024))
     return 0
 

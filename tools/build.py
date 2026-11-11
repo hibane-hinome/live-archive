@@ -210,7 +210,12 @@ def main():
 
     # 浏览器插件用的双语字幕轨，跟站点同域发布，插件直接按 URL 取。
     # 这份直接读翻译数据库，不受上面 23:30-01:30 的场次筛选影响，白天场也有字幕。
-    n_subs, n_blocks, sub_bytes = export_subs.emit_from_db(cfg, dist, site_dir, data['meta']['built'])
+    # 数据库只在本地有（.data/ 不入库），CI 用 site/data/subs/ 里已入库的那份。
+    try:
+        n_subs, n_blocks, sub_bytes = export_subs.emit_from_db(cfg, dist, site_dir, data['meta']['built'])
+    except Exception as exc:  # 字幕挂了也不该拦着站点发布
+        print('!! 字幕轨导出失败（%s），本站点照常发布' % exc, file=sys.stderr)
+        n_subs, n_blocks, sub_bytes = 0, 0, 0
 
     print('dist: %d 场 / %d 条 / %d 段摘录 / %d 篇日记 · data.js %d KB · v=%s'
           % (len(sess_out), len(recs_out), len(q_out), len(diary_out), len(js.encode('utf-8')) // 1024, ver))

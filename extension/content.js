@@ -27,7 +27,7 @@
   var S = Object.assign({}, DEFAULTS);
 
   var st = {
-    index: null, indexAt: 0, indexErr: '',
+    index: null, indexAt: 0, indexErr: '', source: '',
     blocks: [], trackKey: '', trackInfo: null,
     video: null, wrap: null, layer: null, zhEl: null, jpEl: null,
     cur: -1, raf: 0, scale: 1, paused: false,
@@ -87,6 +87,49 @@
   function base() {
     var b = (S.base || DEFAULT_BASE).trim();
     return b.charAt(b.length - 1) === '/' ? b : b + '/';
+  }
+
+  // 同一个文件的三处副本。GitHub Pages 偶尔部署失败、国内偶尔连不上，
+  // 多试一处比直接报 404 强。只有用默认源时才挂镜像——用户自己填了地址，
+  // 说明他清楚要什么，别背着他去别处取。
+  var GH = 'hibane-hinome/live-archive';
+
+  function sources() {
+    var b = base();
+    if (b !== DEFAULT_BASE) return [{ name: '自定义', url: b + 'subs/' }];
+    return [
+      { name: 'Pages', url: b + 'subs/' },
+      { name: 'jsDelivr', url: 'https://cdn.jsdelivr.net/gh/' + GH + '@main/site/data/subs/' },
+      { name: 'GitHub', url: 'https://raw.githubusercontent.com/' + GH + '/main/site/data/subs/' }
+    ];
+  }
+
+  /** 按顺序试各处副本，第一个取到的就用。全挂了才报错，并说清是什么情况。 */
+  function loadFile(file, force) {
+    var list = sources(), lastErr = null;
+
+    function step(i) {
+      if (i >= list.length) {
+        var msg = String((lastErr && lastErr.message) || '取数失败');
+        // 404 是最常见的一种，而且它几乎总是「数据还没发出去」，不该让人以为坏了
+        if (/404/.test(msg)) {
+          msg = '线上还没有字幕数据（HTTP 404）。' +
+                (list.length > 1 ? '三处副本都没有。' : '') +
+                '要么发布还没跑完，要么这批字幕还没推上去。';
+        }
+        throw new Error(msg);
+      }
+      var src = list[i];
+      return fetchJSON(src.url + file, force).then(function (d) {
+        st.source = src.name;
+        return d;
+      }).catch(function (e) {
+        lastErr = e;
+        return step(i + 1);
+      });
+    }
+
+    return step(0);
   }
 
   // ---------------------------------------------------------------- 场次匹配
@@ -162,7 +205,7 @@
     if (st.index && !force && Date.now() - st.indexAt < 3 * 3600 * 1000) {
       return Promise.resolve(st.index);
     }
-    return fetchJSON(base() + 'subs/index.json', force).then(function (d) {
+    return loadFile('index.json', force).then(function (d) {
       st.index = d;
       st.indexAt = Date.now();
       st.indexErr = '';
@@ -178,7 +221,7 @@
     st.trackKey = key;
     st.blocks = [];
     st.cur = -1;
-    return fetchJSON(base() + 'subs/' + key + '.json').then(function (d) {
+    return loadFile(key + '.json').then(function (d) {
       if (st.trackKey !== key) return; // 期间又换场了
       st.blocks = d.blocks || [];
       st.trackInfo = d;
