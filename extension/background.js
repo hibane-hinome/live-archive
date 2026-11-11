@@ -8,6 +8,20 @@
 
 const mem = new Map(); // url -> { at, data }
 const TTL = 10 * 60 * 1000;
+// 单个源最多等这么久。国内连 GitHub raw / jsDelivr 经常是「不报错也不返回」，
+// 不设上限的话插件会一直转圈，用户只能以为坏了。
+const TIMEOUT = 12000;
+
+function getJSON(url) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), TIMEOUT);
+  return fetch(url, { cache: 'no-cache', signal: ctrl.signal })
+    .then((r) => {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .finally(() => clearTimeout(timer));
+}
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (!msg || msg.type !== 'hbs:fetch') return false;
@@ -26,16 +40,15 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     }
   }
 
-  fetch(url, { cache: 'no-cache' })
-    .then((r) => {
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      return r.json();
-    })
+  getJSON(url)
     .then((data) => {
       mem.set(url, { at: Date.now(), data });
       sendResponse({ ok: true, data });
     })
-    .catch((err) => sendResponse({ ok: false, error: String(err && err.message || err) }));
+    .catch((err) => {
+      const name = (err && err.name) || '';
+      sendResponse({ ok: false, error: name === 'AbortError' ? '超时（12 秒没有回应）' : String(err && err.message || err) });
+    });
 
   return true; // 异步 sendResponse
 });

@@ -63,6 +63,18 @@
     return Promise.resolve();
   }
 
+  function directFetch(url, force) {
+    // 和 background 一样设上限：连不上时不能一直挂着
+    var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 12000) : 0;
+    return fetch(url, { cache: force ? 'reload' : 'default', signal: ctrl && ctrl.signal })
+      .then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .finally(function () { if (timer) clearTimeout(timer); });
+  }
+
   function fetchJSON(url, force) {
     if (HAS_EXT && chrome.runtime.sendMessage) {
       return chrome.runtime.sendMessage({ type: 'hbs:fetch', url: url, force: !!force })
@@ -72,16 +84,10 @@
         })
         .catch(function () {
           // 中转失败就自己试一次，别让一次偶发错误把字幕钉死
-          return fetch(url, { cache: force ? 'reload' : 'default' }).then(function (r) {
-            if (!r.ok) throw new Error('HTTP ' + r.status);
-            return r.json();
-          });
+          return directFetch(url, force);
         });
     }
-    return fetch(url, { cache: force ? 'reload' : 'default' }).then(function (r) {
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      return r.json();
-    });
+    return directFetch(url, force);
   }
 
   function base() {

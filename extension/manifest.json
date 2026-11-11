@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "火羽 · 录播字幕",
   "short_name": "录播字幕",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "看录播时叠上直播当时的双语字幕：日文原文 + 中文翻译，逐句跟着画面走。",
   "permissions": ["storage", "activeTab"],
   "host_permissions": [
