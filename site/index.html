@@ -11,6 +11,28 @@
 <link rel="stylesheet" href="assets/style.css?v={{V}}">
 </head>
 <body>
+<!-- 氛围层：场景图 → 压暗遮罩 → 跟随鼠标的暖光 → 上浮灯尘 → 右下角立绘。
+     整层不吃鼠标事件，也不参与布局；JS 只在有精确指针的系统上启用视差。 -->
+<div class="ambient" aria-hidden="true">
+  <div class="amb-scene"></div>
+  <div class="amb-veil"></div>
+  <div class="amb-light"></div>
+  <div class="amb-embers">
+    <i style="--l:7%;--s:3px;--d:21s;--t:-3s;--w:18px;--o:.34"></i>
+    <i style="--l:14%;--s:2px;--d:27s;--t:-14s;--w:-22px;--o:.26"></i>
+    <i style="--l:23%;--s:4px;--d:18s;--t:-9s;--w:12px;--o:.30"></i>
+    <i style="--l:31%;--s:2px;--d:24s;--t:-19s;--w:-14px;--o:.22"></i>
+    <i style="--l:41%;--s:3px;--d:29s;--t:-5s;--w:26px;--o:.28"></i>
+    <i style="--l:52%;--s:2px;--d:20s;--t:-12s;--w:-18px;--o:.24"></i>
+    <i style="--l:61%;--s:4px;--d:26s;--t:-22s;--w:16px;--o:.32"></i>
+    <i style="--l:69%;--s:2px;--d:17s;--t:-7s;--w:-24px;--o:.26"></i>
+    <i style="--l:77%;--s:3px;--d:23s;--t:-16s;--w:20px;--o:.35"></i>
+    <i style="--l:84%;--s:2px;--d:28s;--t:-2s;--w:-12px;--o:.24"></i>
+    <i style="--l:91%;--s:4px;--d:19s;--t:-11s;--w:14px;--o:.30"></i>
+    <i style="--l:96%;--s:2px;--d:25s;--t:-20s;--w:-20px;--o:.22"></i>
+  </div>
+  <div class="amb-char"><img src="brand/character-full.webp" alt="" decoding="async"></div>
+</div>
 <div class="glow" aria-hidden="true"></div>
 <div class="grain" aria-hidden="true"></div>
 

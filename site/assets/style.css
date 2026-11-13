@@ -48,6 +48,65 @@ button{font-family:inherit;color:inherit;background:none;border:none;cursor:poin
 }
 ::-webkit-scrollbar-corner{background:transparent}
 
+/* ---------- 氛围层 ----------
+   全部 fixed 且 pointer-events:none，位于 main(z=2) 之下，不挡文字也不吃点击。
+   视差由 JS 写 --dx/--dy/--lx/--ly/--rot，各层用不同倍率做出景深：
+   场景最慢、灯尘最快、立绘反向移动，像镜头在轻微平移。 */
+.ambient{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.amb-scene{
+  position:absolute;inset:-4%;
+  background:url("brand/scene-spring.webp") center 38%/cover no-repeat;
+  opacity:.44;filter:brightness(.72) saturate(.9);
+  transform:translate3d(var(--dx,0px),var(--dy,0px),0) scale(1.05);
+  will-change:transform;
+}
+/* 左侧压得比右侧重：文字主要在左半边与居中栏，不能让插画抢对比度 */
+.amb-veil{
+  position:absolute;inset:0;
+  background:
+    linear-gradient(90deg,rgba(10,8,7,.88) 0%,rgba(10,8,7,.66) 38%,rgba(10,8,7,.34) 74%,rgba(10,8,7,.60) 100%),
+    linear-gradient(180deg,rgba(10,8,7,.58) 0%,transparent 32%,transparent 62%,rgba(10,8,7,.78) 100%);
+}
+.amb-light{
+  position:absolute;inset:0;mix-blend-mode:screen;
+  background:radial-gradient(560px 560px at var(--lx,50%) var(--ly,42%),
+    rgba(255,158,92,.14),rgba(255,122,69,.05) 42%,transparent 72%);
+}
+.amb-embers{
+  position:absolute;inset:0;
+  transform:translate3d(calc(var(--dx,0px) * 2.2),calc(var(--dy,0px) * 1.4),0);
+}
+.amb-embers i{
+  position:absolute;left:var(--l);bottom:-24px;width:var(--s);height:var(--s);
+  border-radius:50%;background:var(--gold);opacity:0;
+  box-shadow:0 0 9px 2px rgba(255,168,96,.4);
+  animation:emberRise var(--d) linear var(--t) infinite;
+}
+@keyframes emberRise{
+  0%{transform:translate3d(0,0,0) scale(.6);opacity:0}
+  12%{opacity:var(--o)}
+  82%{opacity:var(--o)}
+  100%{transform:translate3d(var(--w),-108vh,0) scale(1.15);opacity:0}
+}
+.amb-char{
+  position:absolute;right:0;bottom:0;height:clamp(230px,36vh,400px);
+  opacity:.72;transition:opacity .65s ease;
+  transform:translate3d(calc(var(--dx,0px) * -1.7),calc(var(--dy,0px) * -0.55),0) rotate(var(--rot,0deg));
+  will-change:transform;
+}
+.amb-char img{
+  display:block;height:100%;width:auto;
+  -webkit-mask-image:linear-gradient(180deg,#000 0 78%,transparent 100%);
+  mask-image:linear-gradient(180deg,#000 0 78%,transparent 100%);
+  filter:drop-shadow(0 0 34px rgba(255,140,80,.24));
+  animation:charBreath 7s ease-in-out infinite alternate;
+}
+@keyframes charBreath{from{transform:translateY(0)}to{transform:translateY(-7px)}}
+/* 长列表滚下去以后让她退成背景，别一直压着右下角 */
+body.scrolled .amb-char{opacity:.3}
+@media(max-width:1100px){.amb-char{display:none}}
+@media(max-width:720px){.amb-scene{opacity:.3}.amb-embers{display:none}}
+
 .glow{
   position:fixed;inset:0;pointer-events:none;z-index:0;
   background:
@@ -300,8 +359,9 @@ a.hl .hl-dot{
   font-family:var(--mono);font-size:11px;color:var(--dim-2);letter-spacing:.05em;
 }
 .pull figcaption span{
-  font-family:var(--sans);font-size:10.5px;letter-spacing:.14em;color:var(--fire-soft);
-  border:1px solid rgba(255,122,69,.3);border-radius:999px;padding:2px 9px;
+  font-family:var(--sans);font-size:10.5px;letter-spacing:.14em;
+  color:var(--tagc,var(--fire-soft));
+  border:1px solid var(--tagc,rgba(255,122,69,.3));border-radius:999px;padding:2px 9px;
 }
 .pull figcaption a{color:var(--dim);transition:color .2s}
 .pull figcaption a:hover{color:var(--fire-soft)}
@@ -352,8 +412,9 @@ a.hl .hl-dot{
 .quote:hover::before{opacity:.7}
 .qside{padding-top:2px}
 .qside .tag{
-  display:inline-block;font-size:10.5px;letter-spacing:.16em;color:var(--fire-soft);
-  border:1px solid rgba(255,122,69,.3);border-radius:999px;padding:2px 9px;
+  display:inline-block;font-size:10.5px;letter-spacing:.16em;
+  color:var(--tagc,var(--fire-soft));
+  border:1px solid var(--tagc,rgba(255,122,69,.3));border-radius:999px;padding:2px 9px;
 }
 .qside .qtime{
   display:block;margin-top:12px;font-family:var(--mono);font-size:11px;
@@ -411,8 +472,9 @@ a.hl .hl-dot{
 .qcard:hover{transform:translateY(-3px);border-color:rgba(255,122,69,.3);box-shadow:0 22px 46px -30px rgba(0,0,0,.9)}
 .qcard:hover::before{opacity:1}
 .qcard .tag{
-  display:inline-block;font-size:10.5px;letter-spacing:.16em;color:var(--fire-soft);
-  border:1px solid rgba(255,122,69,.3);border-radius:999px;padding:2px 9px;margin-bottom:16px;
+  display:inline-block;font-size:10.5px;letter-spacing:.16em;
+  color:var(--tagc,var(--fire-soft));
+  border:1px solid var(--tagc,rgba(255,122,69,.3));border-radius:999px;padding:2px 9px;margin-bottom:16px;
 }
 .qcard .jp{
   font-family:var(--jp);font-size:14.5px;line-height:1.95;color:var(--dim);
@@ -442,6 +504,12 @@ a.hl .hl-dot{
   padding:6px 15px;border-radius:999px;font-size:12.5px;letter-spacing:.05em;
   border:1px solid var(--line);color:var(--dim);transition:.2s;
 }
+/* 标签不设白名单，颜色按名称稳定分配：新标签自动有颜色，不会和已有标签撞成一片橙 */
+.chip::before{
+  content:"";display:inline-block;width:6px;height:6px;border-radius:50%;
+  background:var(--tagc,var(--dim-2));margin-right:7px;vertical-align:1px;
+}
+.chip.on::before{background:rgba(26,13,7,.42)}
 .chip:hover{color:var(--ink);border-color:var(--line-strong)}
 .chip.on{color:#1a0d07;background:linear-gradient(140deg,var(--fire-soft),var(--fire));border-color:transparent;font-weight:600}
 .chip .n{opacity:.6;margin-left:6px;font-size:11px}
@@ -714,6 +782,27 @@ a.dentry.dmini .dlinks{margin-top:16px;padding-top:13px}
 .arch-note b{color:var(--fire-soft);font-weight:500}
 
 /* about */
+/* 关于页把场景原图完整亮一次：其余页面只把它当压暗的氛围底图 */
+.about-art{
+  position:relative;margin:0 0 34px;height:232px;border:1px solid var(--line);
+  border-radius:16px;overflow:hidden;background:var(--panel);
+}
+.about-art img{
+  width:100%;height:100%;object-fit:cover;object-position:66% 34%;
+  filter:brightness(.88) saturate(.96);
+  transform:scale(1.02);animation:artDrift 24s ease-in-out infinite alternate;
+}
+@keyframes artDrift{from{transform:scale(1.02) translateX(0)}to{transform:scale(1.07) translateX(-1.4%)}}
+.about-art::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(90deg,rgba(10,8,7,.72),transparent 64%),
+             linear-gradient(0deg,rgba(10,8,7,.8),transparent 58%);
+}
+.about-art figcaption{
+  position:absolute;left:20px;bottom:14px;z-index:1;
+  font-size:10.5px;letter-spacing:.18em;color:var(--ink-2);
+}
+@media(max-width:720px){.about-art{height:168px}}
 .about{padding-top:64px;max-width:760px}
 .about h2{font-family:var(--jp);font-size:38px;font-weight:500;margin:0 0 18px}
 .about p{color:var(--dim);line-height:2;font-size:14.5px;margin:0 0 18px}
@@ -875,4 +964,9 @@ a.dentry.dmini .dlinks{margin-top:16px;padding-top:13px}
   .rv{opacity:1;transform:none;transition:none}
   .tbar .fill{transition:none;width:var(--w)}
   .qcard:hover{transform:none}
+  /* 氛围层保留静态画面，关掉一切位移与粒子 */
+  .amb-scene,.amb-char,.amb-embers{transform:none}
+  .amb-char img,.about-art img{animation:none}
+  .amb-embers{display:none}
+  .amb-light{display:none}
 }

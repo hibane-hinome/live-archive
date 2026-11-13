@@ -21,6 +21,17 @@
   function sess(id) { return D.sessions[id]; }
   function dateLabel(s) { return s.date.replace('-', '.') + ' ' + s.week; }
 
+  // 摘录标签不设白名单，按内容自由增加；颜色从名称做稳定 hash，
+  // 同一个标签在任何页面、任何一次构建里都是同一个颜色。
+  var TAG_PALETTE = ['#ffa172', '#e8c489', '#f49a8c', '#f0bd8e', '#dd8f6e',
+                     '#e5a9a0', '#d9b06a', '#f2a98f', '#c9b28e', '#e6a07a'];
+  function tagColor(t) {
+    var h = 0, s = String(t || '');
+    for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    return TAG_PALETTE[h % TAG_PALETTE.length];
+  }
+  function tagStyle(t) { return ' style="--tagc:' + tagColor(t) + '"'; }
+
   /* 页脚元信息：built 是这次构建的时刻（由 tools/build.py 写入），generated 是
      数据截止到的那一场结束时间。两者都有就都显示——只写「更新于」容易让人以为
      那一分钟刚开过播。 */
@@ -297,7 +308,7 @@
           ? '<figure class="pull rv">' +
               '<blockquote>' + esc(dqText) + '</blockquote>' +
               '<figcaption>' +
-                '<span>' + esc(dq.tag) + '</span>' +
+                '<span' + tagStyle(dq.tag) + '>' + esc(dq.tag) + '</span>' +
                 '<a href="#/archive/' + dq.s + '?t=' + encodeURIComponent(dq.t) + '">' +
                   esc(dq.date.replace('-', '.')) + ' ' + esc(dq.t) + ' 回原稿 →</a>' +
                 '<em>从 ' + D.meta.quoteCount + ' 段摘录里随机一句</em>' +
@@ -509,10 +520,15 @@
     D.quotes.forEach(function (q) { if (tags.indexOf(q.tag) < 0) tags.push(q.tag); });
     var counts = {};
     D.quotes.forEach(function (q) { counts[q.tag] = (counts[q.tag] || 0) + 1; });
+    // 标签会随内容增长，按条数降序排（同数按名称），「全部」固定首位
+    tags = ['全部'].concat(tags.slice(1).sort(function (a, b) {
+      return (counts[b] - counts[a]) || a.localeCompare(b, 'zh');
+    }));
 
     var chips = tags.map(function (t) {
       var n = t === '全部' ? D.quotes.length : counts[t];
-      return '<button class="chip' + (t === state.tag ? ' on' : '') + '" data-tag="' + esc(t) + '">' +
+      return '<button class="chip' + (t === state.tag ? ' on' : '') + '" data-tag="' + esc(t) + '"' +
+        (t === '全部' ? '' : tagStyle(t)) + '>' +
         esc(t) + '<span class="n">' + n + '</span></button>';
     }).join('');
 
@@ -566,7 +582,7 @@
   function quoteCard(q) {
     return '<article class="quote">' +
       '<div class="qside">' +
-        '<span class="tag">' + esc(q.tag) + '</span>' +
+        '<span class="tag"' + tagStyle(q.tag) + '>' + esc(q.tag) + '</span>' +
         '<a class="qtime" href="#/archive/' + q.s + '?t=' + encodeURIComponent(q.t) + '">' +
           esc(q.date.replace('-', '.')) + '<i>' + esc(q.t) + '</i>' +
         '</a>' +
@@ -1010,6 +1026,10 @@
     var diaryN = D.meta.diaryCount || (D.diary ? D.diary.length : 0);
     app.innerHTML =
       '<section class="about">' +
+        '<figure class="about-art">' +
+          '<img src="brand/scene-spring.webp" alt="形象插画" decoding="async">' +
+          '<figcaption>装饰插图</figcaption>' +
+        '</figure>' +
         '<div class="kicker">ABOUT THIS ARCHIVE</div>' +
         '<h2>关于<span class="accent">这份存档</span></h2>' +
         '<p class="about-lead">把 <b>' + esc(D.meta.streamer) + '</b> 直播里的日语语音自动转成文字，' +
@@ -1058,4 +1078,51 @@
   }
 
   route();
+})();
+
+/* ---------- 氛围视差 ----------
+   鼠标位置经一阶低通再写进 CSS 变量，各层用不同倍率位移形成景深。
+   只在精确指针 + 未开启「减少动态效果」时运行；循环在追上目标后自动停，
+   鼠标不动就不占 CPU。触屏/reduced-motion 下保留静态插画。 */
+(function () {
+  'use strict';
+  var mq = window.matchMedia ? window.matchMedia.bind(window) : null;
+  var reduce = mq && mq('(prefers-reduced-motion: reduce)').matches;
+  var fine = mq && mq('(hover: hover) and (pointer: fine)').matches;
+  if (reduce || !fine) return;
+
+  var root = document.documentElement;
+  var tx = 0, ty = 0, cx = 0, cy = 0, raf = 0;
+
+  function apply() {
+    root.style.setProperty('--dx', (-cx * 16).toFixed(2) + 'px');
+    root.style.setProperty('--dy', (-cy * 11).toFixed(2) + 'px');
+    root.style.setProperty('--lx', (50 + cx * 48).toFixed(2) + '%');
+    root.style.setProperty('--ly', (50 + cy * 42).toFixed(2) + '%');
+    root.style.setProperty('--rot', (cx * 1.4).toFixed(2) + 'deg');
+  }
+  function frame() {
+    cx += (tx - cx) * 0.085;
+    cy += (ty - cy) * 0.085;
+    apply();
+    if (Math.abs(tx - cx) > 0.002 || Math.abs(ty - cy) > 0.002) raf = requestAnimationFrame(frame);
+    else raf = 0;
+  }
+  window.addEventListener('pointermove', function (e) {
+    tx = (e.clientX / window.innerWidth - 0.5) * 2;
+    ty = (e.clientY / window.innerHeight - 0.5) * 2;
+    if (!raf) raf = requestAnimationFrame(frame);
+  }, { passive: true });
+
+  var queued = false;
+  function onScroll() {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(function () {
+      document.body.classList.toggle('scrolled', window.scrollY > 420);
+      queued = false;
+    });
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
 })();
