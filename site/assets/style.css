@@ -54,17 +54,17 @@ button{font-family:inherit;color:inherit;background:none;border:none;cursor:poin
 
 /* ---------- 氛围层 ----------
    全部 fixed 且 pointer-events:none，位于 main(z=2) 之下，不挡文字也不吃点击。
-   伪 3D 靠两件事：各层按「深度」用不同倍率/方向位移，以及轻微的 rotateX/rotateY
-   透视倾斜（JS 写 --dx/--dy/--rx/--ry/--lx/--ly）。远层最慢并带景深模糊，
-   灯尘最快，镜头一动就像有几层空间。 */
+   伪 3D 靠各层按「深度」用不同倍率/方向位移 + 轻微 rotateX/rotateY 倾斜。
+   性能口径：JS 每帧只写这几个层的 inline transform，不写 :root 自定义属性
+   （否则整棵文档树每帧都要重算样式）；远景的模糊/压暗烘进图片，光晕靠位移
+   而不是逐帧重绘渐变，卡片倾斜降频更新。 */
 .ambient{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
-/* 远景：同一张图放大、模糊、压暗，只跟一点点鼠标，首页才启用 */
+/* 远景：预渲染的模糊图（tools/prepare_art.py --far），运行时只做 GPU transform */
 .amb-far{
   display:none;position:absolute;inset:-10%;
-  background:var(--scene) center 42%/cover no-repeat;
-  opacity:.36;filter:blur(7px) brightness(.82) saturate(.85);
-  transform:perspective(1400px) rotateX(calc(var(--rx,0deg) * .3)) rotateY(calc(var(--ry,0deg) * .3))
-            translate3d(calc(var(--dx,0px) * .32),calc(var(--dy,0px) * .26),0) scale(1.2);
+  background:url("../brand/home-night-far.webp") center 42%/cover no-repeat;
+  opacity:.36;
+  transform:translate3d(0,0,0) scale(1.2);
   will-change:transform;
 }
 body.is-home .amb-far{display:block}
@@ -72,8 +72,7 @@ body.is-home .amb-far{display:block}
   position:absolute;inset:-4%;
   background:var(--scene) center 38%/cover no-repeat;
   opacity:.44;filter:brightness(.72) saturate(.9);
-  transform:perspective(1100px) rotateX(calc(var(--rx,0deg) * .55)) rotateY(calc(var(--ry,0deg) * .55))
-            translate3d(var(--dx,0px),var(--dy,0px),0) scale(1.08);
+  transform:translate3d(0,0,0) scale(1.08);
   will-change:transform;
 }
 /* 新夜景本来就暗，首页别再按亮插画那套压；左侧仍压重一点托住白字 */
@@ -90,20 +89,26 @@ body.is-home .amb-veil{
     linear-gradient(90deg,rgba(10,8,7,.82) 0%,rgba(10,8,7,.50) 38%,rgba(10,8,7,.08) 74%,rgba(10,8,7,.28) 100%),
     linear-gradient(180deg,rgba(10,8,7,.44) 0%,transparent 34%,transparent 62%,rgba(10,8,7,.72) 100%);
 }
+/* 固定渐变圆 + translate3d 跟随鼠标：改 gradient 的中心会逼浏览器每帧重绘整屏 */
 .amb-light{
-  position:absolute;inset:0;mix-blend-mode:screen;
-  background:radial-gradient(560px 560px at var(--lx,50%) var(--ly,42%),
+  position:absolute;left:50%;top:50%;width:1120px;height:1120px;margin:-560px 0 0 -560px;
+  border-radius:50%;mix-blend-mode:screen;
+  background:radial-gradient(circle closest-side,
     rgba(255,158,92,.14),rgba(255,122,69,.05) 42%,transparent 72%);
+  transform:translate3d(0,0,0);
+  will-change:transform;
 }
 .amb-embers{
   position:absolute;inset:0;
-  transform:translate3d(calc(var(--dx,0px) * 3),calc(var(--dy,0px) * 2),0);
+  transform:translate3d(0,0,0);
+  will-change:transform;
 }
 .amb-embers i{
   position:absolute;left:var(--l);bottom:-24px;width:var(--s);height:var(--s);
   border-radius:50%;background:var(--gold);opacity:0;
   box-shadow:0 0 9px 2px rgba(255,168,96,.4);
   animation:emberRise var(--d) linear var(--t) infinite;
+  will-change:transform,opacity;
 }
 @keyframes emberRise{
   0%{transform:translate3d(0,0,0) scale(.6);opacity:0}
@@ -120,6 +125,7 @@ body.is-home .amb-veil{
     radial-gradient(700px 420px at 12% 4%, rgba(232,196,137,.09), transparent 66%),
     radial-gradient(1200px 800px at 50% 120%, rgba(255,122,69,.06), transparent 70%);
   animation:glowDrift 32s ease-in-out infinite alternate;
+  will-change:transform;
 }
 /* 光斑极慢地漂一点，像屏幕背后有炉火在动 */
 @keyframes glowDrift{
@@ -128,6 +134,7 @@ body.is-home .amb-veil{
 }
 .grain{
   position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.035;
+  transform:translateZ(0);   /* 单独提升成合成层，避免跟着背景一起重绘 */
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/></filter><rect width='140' height='140' filter='url(%23n)'/></svg>");
 }
 
@@ -136,8 +143,8 @@ body.is-home .amb-veil{
   position:sticky;top:0;z-index:50;
   display:flex;align-items:center;justify-content:space-between;
   padding:14px 40px;
-  background:rgba(10,8,7,.72);
-  backdrop-filter:blur(14px) saturate(1.2);
+  /* 不用 backdrop-filter：背景层每帧在动，毛玻璃会强制逐帧重采样整条 header */
+  background:rgba(10,8,7,.9);
   border-bottom:1px solid var(--line);
 }
 .brand{display:flex;align-items:center;gap:11px}
@@ -192,8 +199,9 @@ main{position:relative;z-index:2;max-width:1240px;margin:0 auto;padding:0 40px 9
   background:linear-gradient(178deg,rgba(255,255,255,.052),rgba(255,255,255,.012) 62%,rgba(255,122,69,.035));
 }
 /* 包一层再倾斜：.hero-side 自己要用 transform 做淡入，两者会打架 */
+/* 倾斜由 JS 降频写 inline transform；这里只给静态初值 */
 .hs-tilt{
-  transform:perspective(900px) rotateX(calc(var(--rx,0deg) * -.45)) rotateY(calc(var(--ry,0deg) * -.45));
+  transform:perspective(900px);
   transition:transform .22s ease-out;
 }
 /* 暖光放在左下角，别压住标题行与右上角的计数 */
@@ -286,7 +294,7 @@ main{position:relative;z-index:2;max-width:1240px;margin:0 auto;padding:0 40px 9
     radial-gradient(120% 220% at 0% 0%,rgba(255,122,69,.16),rgba(255,122,69,0) 52%),
     linear-gradient(180deg,rgba(255,255,255,.062),rgba(255,255,255,.014));
   box-shadow:0 26px 54px -40px rgba(0,0,0,.95),inset 0 1px 0 rgba(255,255,255,.05);
-  transform:perspective(900px) rotateX(calc(var(--rx,0deg) * -.3)) rotateY(calc(var(--ry,0deg) * -.3));
+  transform:perspective(900px);   /* 同上，JS 降频写倾斜 */
   transition:transform .22s ease-out,border-color .25s,box-shadow .25s;
 }
 .hero-links:hover{border-color:rgba(255,122,69,.34);box-shadow:0 30px 60px -40px rgba(255,122,69,.35),inset 0 1px 0 rgba(255,255,255,.06)}
@@ -985,7 +993,7 @@ a.dentry.dmini .dlinks{margin-top:16px;padding-top:13px}
 .bgm-tab{
   width:32px;flex:0 0 32px;padding:10px 0;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
-  background:rgba(22,18,16,.9);backdrop-filter:blur(12px);
+  background:rgba(22,18,16,.96);
   border:1px solid var(--line-strong);border-right:none;border-radius:14px 0 0 14px;
   color:var(--ink-2);transition:color .2s ease,background .2s ease;
 }
@@ -996,7 +1004,7 @@ a.dentry.dmini .dlinks{margin-top:16px;padding-top:13px}
 @keyframes bgmNote{from{transform:translateY(1px);opacity:.55}to{transform:translateY(-2px);opacity:1}}
 .bgm-panel{
   width:var(--bgm-w);flex:0 0 var(--bgm-w);padding:14px 14px 12px;
-  background:rgba(22,18,16,.92);backdrop-filter:blur(16px) saturate(1.1);
+  background:rgba(22,18,16,.96);
   border:1px solid var(--line-strong);border-right:none;
 }
 .bgm-head{display:flex;align-items:center;gap:10px;padding-bottom:11px;border-bottom:1px solid var(--line)}

@@ -3,11 +3,13 @@
 用法::
 
     python tools/prepare_art.py <场景图> <白底立绘图>
+    python tools/prepare_art.py --far   # 从 home-night.webp 生成预模糊远景层
 
 产物（写入 site/brand/）::
 
     scene-spring.webp   场景图压到 1600px 宽，作为全站氛围背景
-    character-full.webp 立绘抠掉白底、裁到人物边界，带 alpha
+    character-full.webp 立绘抠掉白底、裁到人物边界，带 alpha（立绘已下线，备用）
+    home-night-far.webp 首页夜景的远景层，blur/亮度/饱和度预先烘进图，省掉运行时滤镜
 
 白底不能按「接近白色」整体抠：衣服上的白花、眼白、皮肤高光也是浅色。
 做法是从四条边做连通域 floodfill，只把和画外相连的白底判成背景；
@@ -19,7 +21,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw, ImageEnhance, ImageFilter
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "site" / "brand"
@@ -83,7 +85,26 @@ def prepare_character(src: Path) -> Path:
     return dst
 
 
+def prepare_far() -> Path:
+    """把远景层的 blur(7px) / brightness(.82) / saturate(.85) 烘进图片。
+
+    CSS 的运行时 filter 会让这一层每帧都要重新栅格化；远景本来就是虚的，
+    预渲染一次后浏览器只需要做 GPU transform。
+    """
+    im = Image.open(OUT / "home-night.webp").convert("RGB")
+    im = im.filter(ImageFilter.GaussianBlur(7))
+    im = ImageEnhance.Brightness(im).enhance(0.82)
+    im = ImageEnhance.Color(im).enhance(0.85)
+    dst = OUT / "home-night-far.webp"
+    im.save(dst, "WEBP", quality=76, method=6)
+    return dst
+
+
 if __name__ == "__main__":
+    if len(sys.argv) == 2 and sys.argv[1] == "--far":
+        out = prepare_far()
+        print(f"{out.relative_to(ROOT)}  {out.stat().st_size / 1024:.0f} KB  {Image.open(out).size}")
+        sys.exit(0)
     if len(sys.argv) != 3:
         sys.exit(__doc__)
     for fn, p in ((prepare_scene, Path(sys.argv[1])), (prepare_character, Path(sys.argv[2]))):

@@ -1069,11 +1069,13 @@
   route();
 })();
 
-/* ---------- 氛围视差 / 伪 3D ----------
-   鼠标位置经一阶低通再写进 CSS 变量：--dx/--dy 是平面位移，--rx/--ry 是轻微
-   透视倾斜角，各层用不同倍率与方向消费它们，形成远中近的空间感。
-   只在精确指针 + 未开启「减少动态效果」时运行；循环在追上目标后自动停，
-   鼠标不动就不占 CPU。触屏/reduced-motion 下保留静态插画。 */
+/* ---------- 氛围视差 / 伪 3D（性能版） ----------
+   鼠标位置经一阶低通后，每帧只写几个 fixed 层的 inline transform：
+   · 不写 :root 自定义属性 —— 那会让整棵文档树每帧重新计算样式；
+   · 光晕用位移而不是改渐变中心 —— 后者每帧都要重绘整屏渐变；
+   · 卡片倾斜每 6 帧更新一次（自带 .22s transition，肉眼无差别）；
+   · 变换只落在 will-change:transform 的合成层上，不触发布局与重绘。
+   精确指针 + 未开启「减少动态效果」时才运行，鼠标停下即停 rAF。 */
 (function () {
   'use strict';
   var mq = window.matchMedia ? window.matchMedia.bind(window) : null;
@@ -1081,30 +1083,69 @@
   var fine = mq && mq('(hover: hover) and (pointer: fine)').matches;
   if (reduce || !fine) return;
 
-  var root = document.documentElement;
-  var tx = 0, ty = 0, cx = 0, cy = 0, raf = 0;
+  var amb = document.querySelector('.ambient');
+  if (!amb) return;
+  var far = amb.querySelector('.amb-far');
+  var scene = amb.querySelector('.amb-scene');
+  var light = amb.querySelector('.amb-light');
+  var embers = amb.querySelector('.amb-embers');
+
+  // 首页卡片由 hash 路由动态渲染，DOM 换掉后要重新抓引用
+  var cards = [];
+  function collect() {
+    cards = [];
+    var a = document.querySelector('.hero-links');
+    var b = document.querySelector('.hs-tilt');
+    if (a) cards.push({ el: a, k: -0.3 });
+    if (b) cards.push({ el: b, k: -0.45 });
+  }
+  collect();
+  var appEl = document.getElementById('app');
+  if (appEl && window.MutationObserver) {
+    new MutationObserver(collect).observe(appEl, { childList: true });
+  } else {
+    window.addEventListener('hashchange', collect);
+  }
+
+  var W = window.innerWidth, H = window.innerHeight;
+  window.addEventListener('resize', function () {
+    W = window.innerWidth; H = window.innerHeight;
+  }, { passive: true });
+
+  var tx = 0, ty = 0, cx = 0, cy = 0, raf = 0, tick = 0;
+  function f(n) { return n.toFixed(2); }
 
   function apply() {
-    root.style.setProperty('--dx', (-cx * 16).toFixed(2) + 'px');
-    root.style.setProperty('--dy', (-cy * 11).toFixed(2) + 'px');
-    root.style.setProperty('--lx', (50 + cx * 48).toFixed(2) + '%');
-    root.style.setProperty('--ly', (50 + cy * 42).toFixed(2) + '%');
-    root.style.setProperty('--rx', (-cy * 2.6).toFixed(2) + 'deg');
-    root.style.setProperty('--ry', (cx * 3.4).toFixed(2) + 'deg');
+    var dx = -cx * 16, dy = -cy * 11, rx = -cy * 2.6, ry = cx * 3.4;
+    scene.style.transform =
+      'perspective(1100px) rotateX(' + f(rx * 0.55) + 'deg) rotateY(' + f(ry * 0.55) + 'deg) ' +
+      'translate3d(' + f(dx) + 'px,' + f(dy) + 'px,0) scale(1.08)';
+    far.style.transform =
+      'perspective(1400px) rotateX(' + f(rx * 0.3) + 'deg) rotateY(' + f(ry * 0.3) + 'deg) ' +
+      'translate3d(' + f(dx * 0.32) + 'px,' + f(dy * 0.26) + 'px,0) scale(1.2)';
+    embers.style.transform = 'translate3d(' + f(dx * 3) + 'px,' + f(dy * 2) + 'px,0)';
+    light.style.transform = 'translate3d(' + f(cx * 0.48 * W) + 'px,' + f(cy * 0.42 * H) + 'px,0)';
+
+    // 卡片降频：约 100ms 一次，中间由 CSS transition 补齐
+    if (++tick % 6 === 0) {
+      for (var i = 0; i < cards.length; i++) {
+        cards[i].el.style.transform =
+          'perspective(900px) rotateX(' + f(rx * cards[i].k) + 'deg) rotateY(' + f(ry * cards[i].k) + 'deg)';
+      }
+    }
   }
   function frame() {
-    cx += (tx - cx) * 0.085;
-    cy += (ty - cy) * 0.085;
+    cx += (tx - cx) * 0.13;
+    cy += (ty - cy) * 0.13;
     apply();
-    if (Math.abs(tx - cx) > 0.002 || Math.abs(ty - cy) > 0.002) raf = requestAnimationFrame(frame);
+    if (Math.abs(tx - cx) > 0.005 || Math.abs(ty - cy) > 0.005) raf = requestAnimationFrame(frame);
     else raf = 0;
   }
   window.addEventListener('pointermove', function (e) {
-    tx = (e.clientX / window.innerWidth - 0.5) * 2;
-    ty = (e.clientY / window.innerHeight - 0.5) * 2;
+    tx = (e.clientX / W - 0.5) * 2;
+    ty = (e.clientY / H - 0.5) * 2;
     if (!raf) raf = requestAnimationFrame(frame);
   }, { passive: true });
-
 })();
 
 /* ---------- 悬浮背景音乐 ----------

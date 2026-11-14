@@ -111,7 +111,7 @@ site/
   index.html              {{TITLE}} {{DESC}} {{STREAMER}} {{V}} 构建时替换
   assets/app.js           前端 hash 路由：#/ #/diary #/quotes #/archive #/about
   assets/style.css
-  brand/                 头像、favicon、氛围底图与首页夜景（--scene 切换）
+  brand/                 头像、favicon、氛围底图、首页夜景（--scene 切换）与预模糊远景
   audio/                 背景音乐 mp3（build.py 的 COPY 一起复制，preload=none）
   data/profile.json       主播名 / 标题 / 描述
   data/diary.json         直播日记（人工写，最新在最前）
@@ -207,16 +207,26 @@ CI：`.github/workflows/pages.yml`，`site/**` / `tools/**` 推送后自动 buil
 
 ### 装饰插图（2026-11-14 起）
 
-`site/brand/` 的装饰图由 `tools/prepare_art.py <场景图> <白底立绘图>` 从原图生成，不要直接改产物：
+`site/brand/` 的装饰图由 `tools/prepare_art.py <场景图> <白底立绘图>` 从原图生成；另有 `python tools/prepare_art.py --far` 从 `home-night.webp` 预渲染远景层。不要直接改产物：
 
 | 文件 | 用途 |
 |---|---|
 | `scene-spring.webp` | 全站氛围底图（`.amb-scene`，压暗 + 视差）；关于页横幅用它亮一次原图 |
 | `home-night.webp` | 首页专属夜景，由 `body.is-home` 切换 `--scene`，左侧留白给文字 |
+| `home-night-far.webp` | 首页远景层（`.amb-far`），`blur(7px)` / `brightness(.82)` / `saturate(.85)` 已烘进图，约 9 KB |
 
 **右下角立绘已下线**（2026-11-15 用户指定）：`character-full.webp` 连同 `.amb-char` 层、呼吸动画、`body.scrolled` 与 `--rot` 变量一并移除，站点不再发布这张图。`prepare_art.py` 仍保留白底立绘的处理能力备用，但产物不要放回 `site/brand/`；若要恢复立绘，白底必须按**边缘连通域**抠，不能按「接近白色」整体抠——衣服上的白花、眼白、皮肤高光也是浅色，会被一起吃掉。
 
 鼠标视差写在 `index.html` 的氛围层 + `style.css` + `app.js` 末尾那个独立 IIFE 里，`prefers-reduced-motion` 与触屏会自动降级成静态。
+
+### 氛围层性能口径（2026-11-15 优化掉帧后定下）
+
+改氛围层时别把下面几条改回去，否则鼠标一动就掉帧：
+
+- **不写 `:root` 自定义属性做逐帧视差**。JS 每帧只改 `.amb-far` / `.amb-scene` / `.amb-embers` / `.amb-light` 这几个层的 inline `transform`；原来写在 `document.documentElement` 上的 `--dx/--dy/--rx/--ry/--lx/--ly` 会让整棵文档树每帧重算样式。卡片（`.hero-links` / `.hs-tilt`）倾斜每 6 帧更新一次，靠 `.22s transition` 补中间帧；首页是动态渲染的，用 `MutationObserver` 重新抓这两个元素。
+- **光晕用位移不用改渐变中心**。`.amb-light` 是固定 1120px 的渐变圆，靠 `translate3d` 跟随鼠标；若改回 `radial-gradient(... at var(--lx) var(--ly))`，每帧都要重绘整屏渐变。
+- **运行时不做大面积 blur / backdrop-filter**。远景模糊预烘进 `home-night-far.webp`；sticky header 与音乐面板不用 `backdrop-filter`（背景每帧在动，会强制逐帧重采样），改用接近不透明的实色。
+- 各层带 `will-change:transform` 固定在合成层上；`grain` 用 `translateZ(0)` 单独提升，避免跟着背景重绘。低通系数 `0.13`、收敛阈值 `0.005`，鼠标停下即停 rAF。
 
 ---
 
