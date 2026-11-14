@@ -874,13 +874,37 @@
       paintDay();
     }
 
+    // 「回到最新」不能只翻月份：已经在最新月时 goMonth 会直接 return，
+    // 而且翻月后 day 为空，右侧仍是空白。这里直接定位到最新一天的场次并展开最新一场。
+    function latestSid() {
+      var k = dayKeys[dayKeys.length - 1];
+      var list = k ? (byDay[k] || []) : [];
+      if (!list.length) return null;
+      var s = list.reduce(function (a, b) { return b.start >= a.start ? b : a; }, list[0]);
+      var id = D.sessions.indexOf(s);
+      return id >= 0 ? id : null;
+    }
+    function goLatest() {
+      var k = dayKeys[dayKeys.length - 1];
+      if (!k) return;
+      var lm = k.slice(0, 7);
+      if (month !== lm) {
+        month = lm; day = ''; sid = null;
+        document.getElementById('transcriptBox').innerHTML = '';
+        document.getElementById('calBody').innerHTML = pickerHTML();
+      }
+      setDay(k);
+      var id = latestSid();
+      if (id != null) chooseSession(id);
+    }
+
     var calBody = document.getElementById('calBody');
     calBody.addEventListener('click', function (e) {
       var b = e.target.closest('button[data-goto]');
       if (b && !b.disabled) {
         var g = b.getAttribute('data-goto');
-        if (g === 'latest') g = monthKeys[monthKeys.length - 1];
-        goMonth(g);
+        if (g === 'latest') goLatest();
+        else goMonth(g);
         return;
       }
       var cell = e.target.closest('.cal-cell.has');
