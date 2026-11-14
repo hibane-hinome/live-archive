@@ -54,8 +54,8 @@ button{font-family:inherit;color:inherit;background:none;border:none;cursor:poin
 /* ---------- 氛围层 ----------
    全部 fixed 且 pointer-events:none，位于 main(z=2) 之下，不挡文字也不吃点击。
    伪 3D 靠两件事：各层按「深度」用不同倍率/方向位移，以及轻微的 rotateX/rotateY
-   透视倾斜（JS 写 --dx/--dy/--rx/--ry/--lx/--ly/--rot）。远层最慢并带景深模糊，
-   灯尘最快，立绘反向移动，镜头一动就像有几层空间。 */
+   透视倾斜（JS 写 --dx/--dy/--rx/--ry/--lx/--ly）。远层最慢并带景深模糊，
+   灯尘最快，镜头一动就像有几层空间。 */
 .ambient{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
 /* 远景：同一张图放大、模糊、压暗，只跟一点点鼠标，首页才启用 */
 .amb-far{
@@ -110,24 +110,6 @@ body.is-home .amb-veil{
   82%{opacity:var(--o)}
   100%{transform:translate3d(var(--w),-108vh,0) scale(1.15);opacity:0}
 }
-.amb-char{
-  position:absolute;right:0;bottom:0;height:clamp(230px,36vh,400px);
-  opacity:.72;transition:opacity .65s ease;
-  transform:perspective(900px) rotateY(calc(var(--ry,0deg) * -.35))
-            translate3d(calc(var(--dx,0px) * -2.3),calc(var(--dy,0px) * -.8),0) rotate(var(--rot,0deg));
-  will-change:transform;
-}
-.amb-char img{
-  display:block;height:100%;width:auto;
-  -webkit-mask-image:linear-gradient(180deg,#000 0 78%,transparent 100%);
-  mask-image:linear-gradient(180deg,#000 0 78%,transparent 100%);
-  filter:drop-shadow(0 0 34px rgba(255,140,80,.24));
-  animation:charBreath 7s ease-in-out infinite alternate;
-}
-@keyframes charBreath{from{transform:translateY(0)}to{transform:translateY(-7px)}}
-/* 长列表滚下去以后让她退成背景，别一直压着右下角 */
-body.scrolled .amb-char{opacity:.3}
-@media(max-width:1100px){.amb-char{display:none}}
 @media(max-width:720px){.amb-scene{opacity:.3}.amb-embers{display:none}}
 
 .glow{
@@ -1084,9 +1066,9 @@ a.dentry.dmini .dlinks{margin-top:16px;padding-top:13px}
   .tbar .fill{transition:none;width:var(--w)}
   .qcard:hover{transform:none}
   /* 氛围层保留静态画面，关掉一切位移与粒子 */
-  .amb-far,.amb-scene,.amb-char,.amb-embers,.hero-links,.hs-tilt{transform:none}
+  .amb-far,.amb-scene,.amb-embers,.hero-links,.hs-tilt{transform:none}
   .hero-links,.hs-tilt{transition:none}
-  .amb-char img,.about-art img{animation:none}
+  .about-art img{animation:none}
   .amb-embers{display:none}
   .amb-light{display:none}
   .bgm,.bgm-tab,.bgm-play,.bgm-loop{transition:none}

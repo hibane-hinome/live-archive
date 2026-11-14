@@ -111,7 +111,7 @@ site/
   index.html              {{TITLE}} {{DESC}} {{STREAMER}} {{V}} 构建时替换
   assets/app.js           前端 hash 路由：#/ #/diary #/quotes #/archive #/about
   assets/style.css
-  brand/                 头像、favicon、氛围底图、首页夜景（--scene 切换）与立绘
+  brand/                 头像、favicon、氛围底图与首页夜景（--scene 切换）
   audio/                 背景音乐 mp3（build.py 的 COPY 一起复制，preload=none）
   data/profile.json       主播名 / 标题 / 描述
   data/diary.json         直播日记（人工写，最新在最前）
@@ -207,14 +207,16 @@ CI：`.github/workflows/pages.yml`，`site/**` / `tools/**` 推送后自动 buil
 
 ### 装饰插图（2026-11-14 起）
 
-`site/brand/` 里两张图由 `tools/prepare_art.py <场景图> <白底立绘图>` 从原图生成，不要直接改产物：
+`site/brand/` 的装饰图由 `tools/prepare_art.py <场景图> <白底立绘图>` 从原图生成，不要直接改产物：
 
 | 文件 | 用途 |
 |---|---|
 | `scene-spring.webp` | 全站氛围底图（`.amb-scene`，压暗 + 视差）；关于页横幅用它亮一次原图 |
-| `character-full.webp` | 抠掉白底、带 alpha 的全身立绘，固定在右下角（`.amb-char`），窄屏隐藏 |
+| `home-night.webp` | 首页专属夜景，由 `body.is-home` 切换 `--scene`，左侧留白给文字 |
 
-立绘白底必须按**边缘连通域**抠，不能按「接近白色」整体抠——衣服上的白花、眼白、皮肤高光也是浅色，会被一起吃掉。鼠标视差写在 `index.html` 的氛围层 + `style.css` + `app.js` 末尾那个独立 IIFE 里，`prefers-reduced-motion` 与触屏会自动降级成静态。
+**右下角立绘已下线**（2026-11-15 用户指定）：`character-full.webp` 连同 `.amb-char` 层、呼吸动画、`body.scrolled` 与 `--rot` 变量一并移除，站点不再发布这张图。`prepare_art.py` 仍保留白底立绘的处理能力备用，但产物不要放回 `site/brand/`；若要恢复立绘，白底必须按**边缘连通域**抠，不能按「接近白色」整体抠——衣服上的白花、眼白、皮肤高光也是浅色，会被一起吃掉。
+
+鼠标视差写在 `index.html` 的氛围层 + `style.css` + `app.js` 末尾那个独立 IIFE 里，`prefers-reduced-motion` 与触屏会自动降级成静态。
 
 ---
 

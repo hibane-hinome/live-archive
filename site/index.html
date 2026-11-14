@@ -11,7 +11,7 @@
 <link rel="stylesheet" href="assets/style.css?v={{V}}">
 </head>
 <body class="is-home">
-<!-- 氛围层：远景 → 场景 → 压暗遮罩 → 跟随鼠标的暖光 → 上浮灯尘 → 右下角立绘。
+<!-- 氛围层：远景 → 场景 → 压暗遮罩 → 跟随鼠标的暖光 → 上浮灯尘。
      整层不吃鼠标事件，也不参与布局；JS 只在有精确指针的系统上启用多层视差与伪 3D 倾斜。
      首页用 home-night.webp（无人物、左侧留白），其余页沿用 scene-spring.webp。 -->
 <div class="ambient" aria-hidden="true">
@@ -33,7 +33,6 @@
     <i style="--l:91%;--s:4px;--d:19s;--t:-11s;--w:14px;--o:.30"></i>
     <i style="--l:96%;--s:2px;--d:25s;--t:-20s;--w:-20px;--o:.22"></i>
   </div>
-  <div class="amb-char"><img src="brand/character-full.webp" alt="" decoding="async"></div>
 </div>
 <div class="glow" aria-hidden="true"></div>
 <div class="grain" aria-hidden="true"></div>

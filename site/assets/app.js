@@ -1089,7 +1089,6 @@
     root.style.setProperty('--dy', (-cy * 11).toFixed(2) + 'px');
     root.style.setProperty('--lx', (50 + cx * 48).toFixed(2) + '%');
     root.style.setProperty('--ly', (50 + cy * 42).toFixed(2) + '%');
-    root.style.setProperty('--rot', (cx * 2.2).toFixed(2) + 'deg');
     root.style.setProperty('--rx', (-cy * 2.6).toFixed(2) + 'deg');
     root.style.setProperty('--ry', (cx * 3.4).toFixed(2) + 'deg');
   }
@@ -1106,17 +1105,6 @@
     if (!raf) raf = requestAnimationFrame(frame);
   }, { passive: true });
 
-  var queued = false;
-  function onScroll() {
-    if (queued) return;
-    queued = true;
-    requestAnimationFrame(function () {
-      document.body.classList.toggle('scrolled', window.scrollY > 420);
-      queued = false;
-    });
-  }
-  window.addEventListener('scroll', onScroll, { passive: true });
-  onScroll();
 })();
 
 /* ---------- 悬浮背景音乐 ----------
