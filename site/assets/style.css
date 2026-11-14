@@ -15,10 +15,11 @@
   --jp:"Hiragino Mincho ProN","Yu Mincho","Songti SC","Noto Serif SC",serif;
   --sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
   --mono:"SF Mono",ui-monospace,"Cascadia Mono",Menlo,monospace;
-  --scene:url("brand/scene-spring.webp");
+  /* style.css 位于 assets/，相对路径必须从这一层往上一级才能指到 brand/ */
+  --scene:url("../brand/scene-spring.webp");
 }
 /* 首页换一张无人物、左侧留白的夜景，其他栏目沿用原来的插画 */
-body.is-home{--scene:url("brand/home-night.webp")}
+body.is-home{--scene:url("../brand/home-night.webp")}
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
 body{
