@@ -149,19 +149,6 @@
     if (monthKeys.indexOf(m) < 0) monthKeys.push(m);
   });
 
-  // 以 UTC 正午算天数序号，避开夏令时带来的 ±1 天误差
-  function dayNo(k) {
-    var p = k.split('-');
-    return Date.UTC(+p[0], +p[1] - 1, +p[2]) / 86400000;
-  }
-  function keyOfNo(n) { return new Date(n * 86400000).toISOString().slice(0, 10); }
-  var daySet = {};
-  dayKeys.forEach(function (k) { daySet[k] = 1; });
-  var streak = 0;
-  if (dayKeys.length) {
-    var cursor = dayNo(dayKeys[dayKeys.length - 1]);
-    while (daySet[keyOfNo(cursor)]) { streak++; cursor--; }
-  }
   function monthLabel(m) { var p = m.split('-'); return p[0] + ' 年 ' + (+p[1]) + ' 月'; }
   function pad2(n) { return String(n).padStart(2, '0'); }
 
@@ -692,10 +679,10 @@
     }
   });
 
-  /* ---------- 存档：日历 → 当日场次 → 逐字稿，全在同一个页面 ----------
-     日历本身就是索引：格子里只标「这天有几场」，选中日期才在下方列出当天场次，
-     再选一场就地把原来的逐字稿渲染进同一页。全程不换 hash、不跳路由。
-     外部旧链接 #/archive/<sid> 仍可用，只是作为「直接选中这一场」的深链。 */
+  /* ---------- 存档：年月日选择 → 当日场次 → 逐字稿，全在同一个页面 ----------
+     顶部是标准的年 / 月 / 日下拉输入框，下面配一个紧凑的小月历做索引。
+     选中日期才在右侧列出当天场次，再选一场就地把逐字稿渲染进同页下方。
+     全程不换 hash、不跳路由；外部旧链接 #/archive/<sid> 仍作为「直接选中这一场」的深链。 */
   function renderArchivePage(opts) {
     var month = monthKeys.indexOf(opts.month) >= 0 ? opts.month : monthKeys[monthKeys.length - 1];
     var day = (byDay[opts.day] && opts.day.slice(0, 7) === month) ? opts.day : '';
@@ -708,20 +695,57 @@
     var now = new Date();
     var today = now.getFullYear() + '-' + pad2(now.getMonth() + 1) + '-' + pad2(now.getDate());
 
-    function monthCount() {
-      return D.sessions.filter(function (s) { return dayKey(s).slice(0, 7) === month; }).length;
+    // 年份只取有场次的年份；月份列出 12 个月，暂无记录的月份禁用；
+    // 日期列出当月每一天，只让有直播的日子可选，选项里直接带场数。
+    var years = [];
+    monthKeys.forEach(function (k) {
+      var y = k.slice(0, 4);
+      if (years.indexOf(y) < 0) years.push(y);
+    });
+
+    function countOf(k) {
+      return D.sessions.filter(function (s) { return dayKey(s).slice(0, 7) === k; }).length;
+    }
+    function monthCount() { return countOf(month); }
+
+    function yearOptions() {
+      return years.map(function (y) {
+        return '<option value="' + y + '"' + (month.slice(0, 4) === y ? ' selected' : '') +
+               '>' + y + ' 年</option>';
+      }).join('');
+    }
+    function monthOptions() {
+      var out = '';
+      for (var m = 1; m <= 12; m++) {
+        var k = month.slice(0, 4) + '-' + pad2(m);
+        var n = countOf(k);
+        out += '<option value="' + pad2(m) + '"' + (+month.slice(5) === m ? ' selected' : '') +
+               (n ? '' : ' disabled') + '>' + m + ' 月' + (n ? ' · ' + n + ' 场' : ' · 暂无') + '</option>';
+      }
+      return out;
+    }
+    function dayOptions() {
+      var p = month.split('-'), y = +p[0], m = +p[1];
+      var days = new Date(y, m, 0).getDate();
+      var out = '<option value=""' + (day ? '' : ' selected') + '>选择日期</option>';
+      for (var i = 1; i <= days; i++) {
+        var k = month + '-' + pad2(i);
+        var n = byDay[k] ? byDay[k].length : 0;
+        out += '<option value="' + k + '"' + (day === k ? ' selected' : '') +
+               (n ? '' : ' disabled') + '>' + i + ' 日' + (n ? ' · ' + n + ' 场' : '') +
+               (k === today ? ' · 今天' : '') + '</option>';
+      }
+      return out;
     }
 
     function gridHTML() {
       var p = month.split('-'), y = +p[0], m = +p[1];
       var lead = (new Date(y, m - 1, 1).getDay() + 6) % 7;   // 周一开头
       var days = new Date(y, m, 0).getDate();
-      var prevDays = new Date(y, m - 1, 0).getDate();
       var cells = Math.ceil((lead + days) / 7) * 7;
       var out = '';
       for (var i = 0; i < cells; i++) {
         var n = i - lead + 1, inMonth = n >= 1 && n <= days;
-        var shown = inMonth ? n : (n < 1 ? prevDays + n : n - days);
         var key = inMonth ? month + '-' + pad2(n) : '';
         var k = key && byDay[key] ? byDay[key].length : 0;
         var cls = 'cal-cell' + (inMonth ? '' : ' cal-out') + (k ? ' has' : '') +
@@ -729,37 +753,39 @@
         out += '<div class="' + cls + '"' + (key ? ' data-day="' + key + '"' : '') +
                (k ? ' role="button" tabindex="0" aria-label="' + (+key.slice(5, 7)) + ' 月 ' +
                  (+key.slice(8, 10)) + ' 日，' + k + ' 场"' : '') + '>' +
-          '<span class="cal-n">' + shown + '</span>' +
-          (key === today ? '<span class="cal-today-tag">今天</span>' : '') +
-          (k ? '<span class="cal-mark"><i></i>' + k + ' 场</span>' : '') +
+          '<span class="cal-n">' + (inMonth ? n : '') + '</span>' +
+          (k ? '<span class="cal-mark"><i></i></span>' : '') +
         '</div>';
       }
       return out;
     }
 
-    function barHTML() {
+    function pickerHTML() {
       var mi = monthKeys.indexOf(month);
       var prevM = monthKeys[mi - 1] || '', nextM = monthKeys[mi + 1] || '';
-      var jumps = monthKeys.map(function (k) {
-        return '<button class="cal-jump' + (k === month ? ' on' : '') + '" type="button" data-goto="' +
-          k + '">' + (+k.slice(5)) + ' 月</button>';
-      }).join('') + '<button class="cal-jump" type="button" data-goto="latest">最新</button>';
-      return '<div class="cal-bar">' +
+      return '<div class="cal-picker">' +
+          '<div class="cal-selects">' +
+            '<label class="cal-field"><span>年</span><select id="calYear" aria-label="选择年份">' + yearOptions() + '</select></label>' +
+            '<label class="cal-field"><span>月</span><select id="calMonth" aria-label="选择月份">' + monthOptions() + '</select></label>' +
+            '<label class="cal-field wide"><span>日</span><select id="calDay" aria-label="选择日期">' + dayOptions() + '</select></label>' +
+          '</div>' +
           '<div class="cal-nav">' +
             '<button class="cal-arrow" type="button" data-goto="' + prevM + '"' +
-              (prevM ? '' : ' disabled') + ' aria-label="上个月">‹</button>' +
+              (prevM ? '' : ' disabled') + ' aria-label="上一场所在月">‹</button>' +
             '<h3>' + monthLabel(month) + '<em>' + monthCount() + ' 场</em></h3>' +
             '<button class="cal-arrow" type="button" data-goto="' + nextM + '"' +
-              (nextM ? '' : ' disabled') + ' aria-label="下个月">›</button>' +
+              (nextM ? '' : ' disabled') + ' aria-label="下一场所在月">›</button>' +
           '</div>' +
-          '<div class="cal-jumps">' + jumps + '</div>' +
-        '</div>' +
-        '<div class="cal-grid"><div class="cal-dow">' +
-          ['一', '二', '三', '四', '五', '六', '日'].map(function (w, idx) {
-            return '<span' + (idx >= 5 ? ' class="we"' : '') + '>周' + w + '</span>';
-          }).join('') +
-        '</div><div class="cal-cells">' + gridHTML() + '</div></div>' +
-        '<div class="cal-legend"><span><i></i>有直播</span></div>';
+          '<div class="cal-grid"><div class="cal-dow">' +
+            ['一', '二', '三', '四', '五', '六', '日'].map(function (w, idx) {
+              return '<span' + (idx >= 5 ? ' class="we"' : '') + '>' + w + '</span>';
+            }).join('') +
+          '</div><div class="cal-cells">' + gridHTML() + '</div></div>' +
+          '<div class="cal-foot">' +
+            '<span class="cal-legend"><i></i>有直播</span>' +
+            '<button class="cal-jump" type="button" data-goto="latest">回到最新</button>' +
+          '</div>' +
+        '</div>';
     }
 
     function sessionCard(s) {
@@ -775,16 +801,19 @@
             '<span>' + s.dur + ' 分钟 · ' + s.count + ' 条' + (qn ? ' · ' + qn + ' 段摘录' : '') + '</span></span>' +
           (d ? '<span class="cs-title">' + esc(d.title) + '</span>' +
                '<span class="cs-sub">' + esc(d.tagline || '') + '</span>' : '') +
+          '<span class="cs-mini">' + mini + '</span>' +
         '</span>' +
-        '<span class="cs-mini">' + mini + '</span>' +
         '<span class="cs-go">逐字稿 →</span>' +
       '</button>';
     }
 
-    // 选中日期后，只列出这一天有几场；不选中就不渲染任何列表
+    // 选中日期后，只列出这一天有几场；不选中时右侧留一个提示
     function paintDay() {
       var box = document.getElementById('dayPanel');
-      if (!day) { box.innerHTML = ''; return; }
+      if (!day) {
+        box.innerHTML = '<div class="cal-empty"><p>选好年份、月份与日期，<br>这里会列出当天的直播场次。</p></div>';
+        return;
+      }
       var list = byDay[day] || [];
       box.innerHTML =
         '<section class="cal-day-panel">' +
@@ -795,8 +824,8 @@
         '</section>';
     }
 
-    function chooseDay(k) {
-      day = (day === k) ? '' : k;
+    function setDay(k) {
+      day = k || '';
       sid = null;
       document.getElementById('transcriptBox').innerHTML = '';
       document.querySelectorAll('.cal-cell.sel').forEach(function (c) { c.classList.remove('sel'); });
@@ -804,13 +833,9 @@
         var cell = document.querySelector('.cal-cell[data-day="' + day + '"]');
         if (cell) cell.classList.add('sel');
       }
+      var sel = document.getElementById('calDay');
+      if (sel) sel.value = day;
       paintDay();
-      // 场次清单在月历下方，选中后带一眼过去，否则只看到格子变色
-      if (day) {
-        var panel = document.getElementById('dayPanel');
-        var y = panel.getBoundingClientRect().top + window.pageYOffset - 90;
-        window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
-      }
     }
 
     function chooseSession(id) {
@@ -832,13 +857,22 @@
             '<span><b>' + D.sessions.length + '</b> 场</span>' +
             '<span><b>' + dayKeys.length + '</b> 天</span>' +
             '<span><b>' + num(D.meta.total || D.records.length) + '</b> 条记录</span>' +
-            '<span>最长连续 <b>' + streak + '</b> 天</span>' +
           '</div>' +
         '</div>' +
-        '<div id="calBody">' + barHTML() + '</div>' +
-        '<div id="dayPanel"></div>' +
+        '<div class="cal-top">' +
+          '<div id="calBody">' + pickerHTML() + '</div>' +
+          '<div id="dayPanel"></div>' +
+        '</div>' +
         '<div id="transcriptBox"></div>' +
       '</section>';
+
+    function goMonth(g) {
+      if (!g || g === month || monthKeys.indexOf(g) < 0) return;
+      month = g; day = ''; sid = null;
+      document.getElementById('transcriptBox').innerHTML = '';
+      document.getElementById('calBody').innerHTML = pickerHTML();
+      paintDay();
+    }
 
     var calBody = document.getElementById('calBody');
     calBody.addEventListener('click', function (e) {
@@ -846,22 +880,30 @@
       if (b && !b.disabled) {
         var g = b.getAttribute('data-goto');
         if (g === 'latest') g = monthKeys[monthKeys.length - 1];
-        if (!g || g === month) return;
-        month = g; day = ''; sid = null;
-        document.getElementById('dayPanel').innerHTML = '';
-        document.getElementById('transcriptBox').innerHTML = '';
-        calBody.innerHTML = barHTML();   // 月份切换也是页面内重绘，不动 hash
+        goMonth(g);
         return;
       }
       var cell = e.target.closest('.cal-cell.has');
-      if (cell) chooseDay(cell.getAttribute('data-day'));
+      if (cell) setDay(cell.getAttribute('data-day'));
     });
     calBody.addEventListener('keydown', function (e) {
       if (e.key !== 'Enter' && e.key !== ' ') return;
       var cell = e.target.closest && e.target.closest('.cal-cell.has');
       if (!cell) return;
       e.preventDefault();
-      chooseDay(cell.getAttribute('data-day'));
+      setDay(cell.getAttribute('data-day'));
+    });
+    // 三个下拉都是页面内状态，换了年月只重绘选择器，不动 hash
+    calBody.addEventListener('change', function (e) {
+      var t = e.target;
+      if (t.id === 'calYear') {
+        var ys = monthKeys.filter(function (k) { return k.slice(0, 4) === t.value; });
+        goMonth(ys[ys.length - 1]);
+      } else if (t.id === 'calMonth') {
+        goMonth(month.slice(0, 4) + '-' + t.value);
+      } else if (t.id === 'calDay') {
+        setDay(t.value);
+      }
     });
     document.getElementById('dayPanel').addEventListener('click', function (e) {
       var b = e.target.closest('button[data-sid]');
