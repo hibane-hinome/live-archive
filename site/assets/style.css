@@ -680,35 +680,13 @@ a.hl .hl-dot{
 .rv.in .tbar:nth-child(n+9) .fill{transition-delay:.42s}
 .tbar .n{width:34px;flex:none;font-family:var(--mono);font-size:11px;color:var(--dim-2)}
 
-/* ---------- archive ---------- */
-.arch{display:grid;grid-template-columns:250px 1fr;gap:26px;padding-top:44px}
-@media(max-width:900px){.arch{grid-template-columns:1fr}}
-.slist{position:sticky;top:78px;align-self:start;display:flex;flex-direction:column;gap:6px;max-height:calc(100vh - 110px);overflow:auto;padding-right:4px}
-@media(max-width:900px){.slist{
-  position:static;max-height:none;flex-direction:row;overflow-x:auto;
-  padding-bottom:6px;
+/* ---------- 单场逐字稿：就地渲染在存档页日历下方，不再有侧栏列表 ---------- */
+.arch-single{max-width:1000px;margin-top:44px;padding-top:30px;border-top:1px solid var(--line-strong)}
+.cal-backtop{
+  float:right;border:1px solid var(--line);border-radius:999px;
+  padding:6px 12px;font-size:11.5px;color:var(--dim);transition:.2s;
 }
-  .slist::-webkit-scrollbar{height:6px}
-  .slist::-webkit-scrollbar-thumb{border:none;background:rgba(255,255,255,.2)}
-  .slist::-webkit-scrollbar-thumb:hover{background:rgba(255,122,69,.55)}
-}
-/* 逐字稿页侧栏顶部留一个回日历的入口，别把人关在单场里 */
-.sback{
-  display:block;padding:9px 14px;margin-bottom:6px;flex:0 0 auto;
-  border:1px solid var(--line);border-radius:10px;
-  font-size:11.5px;letter-spacing:.06em;color:var(--dim);transition:.2s;
-}
-.sback:hover{color:var(--fire-soft);border-color:rgba(255,122,69,.45);background:rgba(255,122,69,.07)}
-.sitem{
-  text-align:left;padding:12px 14px;border-radius:11px;border:1px solid transparent;
-  display:flex;flex-direction:column;gap:3px;transition:.2s;min-width:150px;
-}
-.sitem:hover{background:rgba(255,255,255,.04)}
-.sitem.on{background:rgba(255,122,69,.1);border-color:rgba(255,122,69,.28)}
-.sitem .d{font-family:var(--mono);font-size:12px;color:var(--ink-2);letter-spacing:.05em}
-.sitem.on .d{color:var(--fire-soft)}
-.sitem .m{font-size:10.5px;color:var(--dim-2);letter-spacing:.04em}
-.sitem .mini{display:flex;gap:2px;margin-top:6px;height:3px;border-radius:2px;overflow:hidden}
+.cal-backtop:hover{color:var(--fire-soft);border-color:rgba(255,122,69,.45)}
 
 .shead{border-bottom:1px solid var(--line);padding-bottom:22px;margin-bottom:22px}
 .shead h2{font-family:var(--jp);font-size:34px;font-weight:500;margin:0 0 6px}
@@ -1141,8 +1119,8 @@ a.dentry.dmini .dlinks{margin-top:16px;padding-top:13px}
 }
 
 /* ---------- 存档日历 ----------
-   #/archive 的索引页：7 列月历 + 当月场次列表。深色玻璃格底，有直播的日子
-   用暖色区分，格内直接放该场入口；窄屏只留开播时间，详情交给下方列表。 */
+   #/archive 是唯一页面：标准 7 列月历，格内只标场数；选中日期后列出当天场次，
+   选中场次后在同页下方展开逐字稿。没有侧栏列表，也没有「当月全部」列表。 */
 /* 宽度收在 1000px：右边给悬浮音乐抽屉留出空档，别让它压住日历 */
 .cal{max-width:1000px;padding-top:44px}
 .cal-head{margin-bottom:30px}
@@ -1182,8 +1160,8 @@ a.dentry.dmini .dlinks{margin-top:16px;padding-top:13px}
 .cal-dow span.we{color:var(--gold)}
 .cal-cells{display:grid;grid-template-columns:repeat(7,1fr)}
 .cal-cell{
-  min-height:100px;padding:9px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);
-  display:flex;flex-direction:column;gap:8px;
+  min-height:78px;padding:9px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);
+  display:flex;flex-direction:column;gap:4px;
   transition:background .2s ease,box-shadow .2s ease;
 }
 .cal-cell:nth-child(7n){border-right:none}
@@ -1194,64 +1172,63 @@ a.dentry.dmini .dlinks{margin-top:16px;padding-top:13px}
 }
 .cal-cell.has:hover{background:rgba(255,122,69,.12)}
 .cal-cell.sel{box-shadow:inset 0 0 0 1px rgba(255,122,69,.6);background:rgba(255,122,69,.14)}
+.cal-cell.has:focus-visible{outline:2px solid var(--fire-soft);outline-offset:-2px}
 .cal-cell.cal-out{opacity:.32}
-.cal-dnum{display:flex;align-items:baseline;justify-content:space-between;gap:4px}
 .cal-n{font-family:var(--mono);font-size:13px;color:var(--dim)}
-.cal-cell.has .cal-n{color:var(--ink-2)}
-.cal-cell.is-today .cal-n{color:var(--fire-soft);font-weight:700}
+.cal-cell.has .cal-n{color:var(--ink-2);font-weight:600}
+.cal-cell.is-today .cal-n{color:var(--fire-soft)}
 .cal-today-tag{font-size:9px;color:var(--fire-soft);letter-spacing:.06em}
-.cal-chips{display:flex;flex-direction:column;gap:4px;margin-top:auto}
-.cal-chip{
-  display:flex;align-items:center;gap:5px;padding:4px 6px;border-radius:6px;
-  border:1px solid rgba(255,122,69,.22);background:rgba(255,122,69,.08);
-  font-family:var(--mono);font-size:10px;color:var(--ink-2);
-  transition:border-color .2s,background .2s,transform .2s;
+/* 标准日历格：只留一个「有几场」的标记，详情交给下方选中日的场次卡 */
+.cal-mark{
+  margin-top:auto;display:inline-flex;align-items:center;gap:5px;
+  font-size:10px;color:var(--fire-soft);letter-spacing:.03em;
 }
-.cal-chip:hover{border-color:rgba(255,122,69,.6);background:rgba(255,122,69,.18);transform:translateX(2px)}
-.cal-chip i{width:5px;height:5px;border-radius:50%;flex:0 0 5px}
-.cal-chip .cc-meta{color:var(--dim-2);font-size:9.5px;margin-left:auto}
+.cal-mark i{width:6px;height:6px;border-radius:50%;background:var(--fire);box-shadow:0 0 7px rgba(255,122,69,.7)}
 .cal-legend{display:flex;gap:16px;flex-wrap:wrap;margin:12px 2px 0;font-size:11px;color:var(--dim-2)}
 .cal-legend i{display:inline-block;width:8px;height:8px;border-radius:2px;background:rgba(255,122,69,.55);margin-right:6px}
-.cal-list{margin-top:38px}
-.cal-list-head{
-  display:flex;align-items:baseline;justify-content:space-between;gap:14px;
-  margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--line);
+
+/* 选中日期后才出现：这一天的场次清单 */
+.cal-day-panel{margin-top:30px}
+.cal-day-head{
+  display:flex;align-items:baseline;gap:12px;margin-bottom:14px;
+  border-bottom:1px solid var(--line);padding-bottom:12px;
 }
-.cal-list-head h3{font-size:13px;letter-spacing:.2em;font-weight:600;color:var(--ink-2);margin:0}
-.cal-list-head .cl-meta{font-size:11.5px;color:var(--dim-2)}
-.cal-clear{border:none;background:none;color:var(--fire-soft);font-size:11.5px;padding:2px 6px;transition:.2s}
-.cal-clear:hover{color:var(--fire)}
+.cal-day-head h3{font-family:var(--jp);font-size:20px;font-weight:500;margin:0;color:var(--ink)}
+.cal-day-head h3 small{font-family:var(--sans);font-size:11px;color:var(--dim-2);margin-left:8px;letter-spacing:.1em}
+.cal-day-head span{font-family:var(--mono);font-size:11.5px;color:var(--fire-soft)}
 .cs-list{display:flex;flex-direction:column;gap:10px}
 .cs-card{
   display:grid;grid-template-columns:90px 1fr 120px auto;align-items:center;gap:16px;
-  padding:14px 18px;border:1px solid var(--line);border-radius:12px;
+  width:100%;padding:14px 18px;text-align:left;font:inherit;color:inherit;cursor:pointer;
+  border:1px solid var(--line);border-radius:12px;
   background:rgba(255,255,255,.02);transition:border-color .2s,background .2s;
 }
 .cs-card:hover{border-color:rgba(255,122,69,.4);background:rgba(255,122,69,.055)}
+.cs-card.on{border-color:rgba(255,122,69,.6);background:rgba(255,122,69,.1)}
+.cs-card:focus-visible{outline:2px solid var(--fire-soft);outline-offset:2px}
 .cs-day{font-family:var(--mono);font-size:16px;color:var(--ink-2)}
 .cs-day em{display:block;font-family:var(--sans);font-style:normal;font-size:10.5px;color:var(--dim-2);margin-top:4px;letter-spacing:.08em}
-.cs-main{min-width:0}
-.cs-time{font-family:var(--mono);font-size:12px;color:var(--fire-soft)}
+.cs-main{min-width:0;display:block}
+.cs-time{display:block;font-family:var(--mono);font-size:12px;color:var(--fire-soft)}
 .cs-time span{color:var(--dim-2);margin-left:10px}
-.cs-title{font-size:13px;color:var(--ink-2);margin-top:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cs-sub{font-size:11px;color:var(--dim-2);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cs-title{display:block;font-size:13px;color:var(--ink-2);margin-top:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cs-sub{display:block;font-size:11px;color:var(--dim-2);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cs-mini{display:flex;gap:1px;height:6px;border-radius:3px;overflow:hidden}
 .cs-mini i{flex:1}
-.cs-links{display:flex;flex-direction:column;gap:6px;align-items:flex-end}
-.cs-links a{font-size:11.5px;color:var(--dim);white-space:nowrap;transition:.2s}
-.cs-links a:hover{color:var(--fire-soft)}
+.cs-go{font-size:11.5px;color:var(--dim);white-space:nowrap;transition:color .2s}
+.cs-card:hover .cs-go,.cs-card.on .cs-go{color:var(--fire-soft)}
 @media(max-width:900px){.cs-card{grid-template-columns:76px 1fr auto}.cs-mini{display:none}}
 @media(max-width:720px){
-  .cal-cell{min-height:64px;padding:5px 3px;gap:3px}
+  .cal-cell{min-height:58px;padding:5px 3px;gap:3px}
   .cal-n{font-size:11px}
   .cal-today-tag{display:none}
-  .cal-chip{padding:2px 3px;font-size:9px;gap:2px}
-  .cal-chip .cc-meta,.cal-chip i{display:none}
+  .cal-mark{font-size:9px;gap:3px}
+  .cal-mark i{width:5px;height:5px}
   .cal-nav h3{min-width:150px;font-size:17px}
   .cs-card{grid-template-columns:1fr;gap:8px;padding:12px 14px}
   .cs-day{font-size:13px}
   .cs-day em{display:inline;margin-left:8px}
-  .cs-links{flex-direction:row;align-items:center}
+  .cs-go{justify-self:start}
 }
 
 /* 尊重系统「减少动态效果」：不做漂移与淡入，直接呈现终态 */
@@ -1267,6 +1244,5 @@ a.dentry.dmini .dlinks{margin-top:16px;padding-top:13px}
   .amb-light{display:none}
   .bgm,.bgm-tab,.bgm-play,.bgm-loop{transition:none}
   .bgm.is-playing .bgm-disc,.bgm.is-playing .bgm-note{animation:none}
-  .cal-cell,.cal-chip,.cal-arrow,.cal-jump,.cs-card,.cs-links a,.cal-clear{transition:none}
-  .cal-chip:hover{transform:none}
+  .cal-cell,.cal-arrow,.cal-jump,.cs-card,.cs-go,.cal-backtop{transition:none}
 }

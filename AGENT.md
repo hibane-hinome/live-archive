@@ -241,12 +241,14 @@ CI：`.github/workflows/pages.yml`，`site/**` / `tools/**` 推送后自动 buil
 - 跳转参数：逐字稿 `#/archive/<sid>?t=<时间>`，摘录 `#/quotes?focus=<qid>`（`quoteCard` 带 DOM id，`renderQuotes` 放开筛选、渲染到目标并加 `.hit` 描边），日记 `#/diary/<key>`，场次 `#/archive/<sid>`；「查看全部逐字稿」走 `#/archive/<sid>?q=<关键词>`，`renderArchive` 预填 `#q` 并跑一次全库检索。
 - 页脚：作者 `Arkueid`（git 提交身份）与 GitHub 仓库 `hibane-hinome/live-archive` 是必须项，另有主播主页 / 直播间、著作权与准确性提示、更新信息。**不写备案 / 登记类信息**，也不要把实现细节搬回页脚（写作口径第 11 条）。
 
-### 存档日历（2026-11-15）
+### 存档日历（2026-11-15，用户第二轮定稿：只要一个页面）
 
-- **`#/archive`（无第二段）= 日历索引页**（`renderCalendar`），**`#/archive/<sid>` = 单场逐字稿**（`renderArchive`）。首页「进存档 / 存档 →」落到日历；搜索、摘录、日记里的 `#/archive/<sid>` 深链不变。逐字稿侧栏顶部有 `.sback` 返回日历。
-- 月份只取**有场次的月**（从 `D.sessions[].dateLong` 聚合），`#/archive?m=YYYY-MM` 可深链；`?d=YYYY-MM-DD` 可预选某天。日筛选是页面内状态、不改 hash，避免换日时整页滚回顶部。别在月份之间插空白月，也别用固定 6 行硬凑格子。
-- 同一天可能有两场（白天场 + 深夜场），必须按 `dayKey(s) = dateLong.replace(/\./g,'-')` 聚合，不能按 `date`（`MM-DD` 无年份）或一对一映射。
-- 格内 `.cal-chip` 直接链到逐字稿；下方 `.cs-card` 给日记标题、色带与日记／逐字稿双入口。最长连续开播天数用 UTC 日序号算，别用本地毫秒差。
+- **存档只有一个页面** `renderArchivePage()`：`#/archive` 出日历 → 点日期在 `#dayPanel` 列出当天场次 → 点场次由 `paintTranscript()` 把原来的逐字稿就地渲染进 `#transcriptBox`。日历、选日、选场、翻月都是页面内状态，**不换 hash、不跳路由**；不要再加侧栏场次列表 `.slist`，也不要「当月全部 · N 场」这种整月列表。
+- 日历走**标准 UI**：周一起始 7 列，格内只有日期数字和「N 场」小圆点标记（`.cal-mark`），不放场次链接。选中日期才显示当天几场；一天多场分行列出。
+- 外部旧链接仍要能用：`#/archive/<sid>`、`?t=`、`?q=` 走同一个页面，只是把日历翻到那天并直接选中该场（搜索/摘录/日记/首页的深链都依赖它）。`?m=YYYY-MM`、`?d=YYYY-MM-DD` 可深链到指定月份/日期。
+- 月份只取**有场次的月**（从 `D.sessions[].dateLong` 聚合），别插空白月，也别用固定 6 行硬凑格子；换月会清空已选日期与逐字稿。
+- 同一天可能有两场（白天场 + 深夜场），必须按 `dayKey(s) = dateLong.replace(/\./g,'-')` 聚合，不能按 `date`（`MM-DD` 无年份）或一对一映射。最长连续开播天数用 UTC 日序号算，别用本地毫秒差。
+- 换场次时 `paintTranscript()` 要重置 `state.q` / `state.hideEmpty`，否则上一场的检索词会带进新场。`?t=` 的摘录校准落位逻辑（`quoteAt` / `dice` / `jump`）原样保留。
 
 ---
 
