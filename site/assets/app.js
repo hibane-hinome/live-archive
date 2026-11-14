@@ -133,6 +133,38 @@
   D.records.forEach(function (r) { topicCount[r.tp] = (topicCount[r.tp] || 0) + 1; });
   var topicRank = Object.keys(topicCount).sort(function (a, b) { return topicCount[b] - topicCount[a]; });
 
+  /* ---------- 存档日历索引 ----------
+     用 dateLong 建索引：同一天可能开两场（白天场 + 深夜场），不能按日期一对一。
+     月份只保留「有场次的月」，翻月就在这些月份之间跳，不会翻出空月。 */
+  function dayKey(s) { return s.dateLong.replace(/\./g, '-'); }   // 2026.11.15 → 2026-11-15
+  var byDay = {}, dayKeys = [], monthKeys = [];
+  D.sessions.forEach(function (s) {
+    var k = dayKey(s);
+    if (!byDay[k]) { byDay[k] = []; dayKeys.push(k); }
+    byDay[k].push(s);
+  });
+  dayKeys.sort();
+  dayKeys.forEach(function (k) {
+    var m = k.slice(0, 7);
+    if (monthKeys.indexOf(m) < 0) monthKeys.push(m);
+  });
+
+  // 以 UTC 正午算天数序号，避开夏令时带来的 ±1 天误差
+  function dayNo(k) {
+    var p = k.split('-');
+    return Date.UTC(+p[0], +p[1] - 1, +p[2]) / 86400000;
+  }
+  function keyOfNo(n) { return new Date(n * 86400000).toISOString().slice(0, 10); }
+  var daySet = {};
+  dayKeys.forEach(function (k) { daySet[k] = 1; });
+  var streak = 0;
+  if (dayKeys.length) {
+    var cursor = dayNo(dayKeys[dayKeys.length - 1]);
+    while (daySet[keyOfNo(cursor)]) { streak++; cursor--; }
+  }
+  function monthLabel(m) { var p = m.split('-'); return p[0] + ' 年 ' + (+p[1]) + ' 月'; }
+  function pad2(n) { return String(n).padStart(2, '0'); }
+
   /* ---------- router ---------- */
   function parseHash() {
     var h = location.hash.replace(/^#\/?/, '');
@@ -167,7 +199,12 @@
     state.q = '';
     state.hideEmpty = false;
     if (r.view === 'quotes') { setNav('quotes'); renderQuotes(); }
-    else if (r.view === 'archive') { setNav('archive'); renderArchive(r.sid, r.q.t, r.q.q || ''); }
+    // #/archive 是日历索引；带场次 id 的 #/archive/<sid> 才是逐字稿
+    else if (r.view === 'archive') {
+      setNav('archive');
+      if (r.seg1 == null) renderCalendar(r.q.m || '', r.q.d || '');
+      else renderArchive(r.sid, r.q.t, r.q.q || '');
+    }
     else if (r.view === 'diary') { setNav('diary'); renderDiary(r.seg1); }
     else if (r.view === 'tools') { setNav('tools'); renderTools(r.seg1); }
     else if (r.view === 'about') { setNav('about'); renderAbout(); }
@@ -653,6 +690,154 @@
     }
   });
 
+  /* ---------- 存档日历 ----------
+     月历按「开播日」归档：格子里直接列出当天每一场的入口；点格子里的空白处
+     会把下方场次列表筛到这一天。月份写在 hash 里，可深链、可用浏览器后退。 */
+  function renderCalendar(month, selected) {
+    if (monthKeys.indexOf(month) < 0) month = monthKeys[monthKeys.length - 1];
+    if (!byDay[selected] || selected.slice(0, 7) !== month) selected = '';
+    var calDay = selected;
+
+    var p = month.split('-'), y = +p[0], m = +p[1];
+    var lead = (new Date(y, m - 1, 1).getDay() + 6) % 7;   // 周一开头
+    var days = new Date(y, m, 0).getDate();
+    var prevDays = new Date(y, m - 1, 0).getDate();
+    var cells = Math.ceil((lead + days) / 7) * 7;
+    var now = new Date();
+    var today = now.getFullYear() + '-' + pad2(now.getMonth() + 1) + '-' + pad2(now.getDate());
+    var monthSessions = D.sessions.filter(function (s) { return dayKey(s).slice(0, 7) === month; });
+    var mi = monthKeys.indexOf(month);
+    var prevM = monthKeys[mi - 1] || '', nextM = monthKeys[mi + 1] || '';
+
+    function topTopic(s) {
+      var keys = Object.keys(s.topics || {});
+      if (!keys.length) return 22;
+      keys.sort(function (a, b) { return s.topics[b] - s.topics[a]; });
+      return parseInt(keys[0], 10);
+    }
+    function chip(s) {
+      return '<a class="cal-chip" href="#/archive/' + s.id + '" title="' +
+        esc(s.dateLong + ' ' + s.week + ' ' + s.start + '–' + s.end + ' · ' + s.count + ' 条') + '">' +
+        '<i style="background:' + tcolor(topTopic(s)) + '"></i>' +
+        '<span class="cc-time">' + esc(s.start) + '</span>' +
+        '<span class="cc-meta">' + s.count + ' 条</span></a>';
+    }
+
+    var grid = '';
+    for (var i = 0; i < cells; i++) {
+      var n = i - lead + 1;
+      var inMonth = n >= 1 && n <= days;
+      var shown = inMonth ? n : (n < 1 ? prevDays + n : n - days);
+      var key = inMonth ? month + '-' + pad2(n) : '';
+      var list = key && byDay[key] ? byDay[key] : [];
+      var cls = 'cal-cell' + (inMonth ? '' : ' cal-out') + (list.length ? ' has' : '') +
+                (key && key === calDay ? ' sel' : '') + (key === today ? ' is-today' : '');
+      grid += '<div class="' + cls + '"' + (key ? ' data-day="' + key + '"' : '') + '>' +
+        '<div class="cal-dnum"><span class="cal-n">' + shown + '</span>' +
+        (key === today ? '<span class="cal-today-tag">今天</span>' : '') + '</div>' +
+        (list.length ? '<div class="cal-chips">' + list.map(chip).join('') + '</div>' : '') +
+        '</div>';
+    }
+
+    function card(s) {
+      var d = D.diary.filter(function (x) { return x.key === s.key; })[0];
+      var qn = D.quotes.filter(function (x) { return x.s === s.id; }).length;
+      var mini = s.ribbon.slice(0, 48).map(function (t) {
+        return '<i style="background:' + (t < 0 ? '#2a2521' : tcolor(t)) + '"></i>';
+      }).join('');
+      return '<div class="cs-card">' +
+        '<div class="cs-day">' + esc(s.date.replace('-', '.')) + '<em>' + esc(s.week) + '</em></div>' +
+        '<div class="cs-main">' +
+          '<div class="cs-time">' + esc(s.start) + ' – ' + esc(s.end) +
+            '<span>' + s.dur + ' 分钟 · ' + s.count + ' 条' + (qn ? ' · ' + qn + ' 段摘录' : '') + '</span></div>' +
+          (d ? '<div class="cs-title">' + esc(d.title) + '</div>' +
+               '<div class="cs-sub">' + esc(d.tagline || '') + '</div>' : '') +
+        '</div>' +
+        '<div class="cs-mini">' + mini + '</div>' +
+        '<div class="cs-links"><a href="#/archive/' + s.id + '">逐字稿 →</a>' +
+          (d ? '<a href="#/diary/' + encodeURIComponent(d.key) + '">日记 →</a>' : '') + '</div>' +
+      '</div>';
+    }
+
+    function renderCalList() {
+      var list = monthSessions.filter(function (s) {
+        return !calDay || dayKey(s) === calDay;
+      });
+      var label = calDay ? (+calDay.slice(5, 7)) + ' 月 ' + (+calDay.slice(8, 10)) + ' 日' : (+m) + ' 月全部';
+      document.getElementById('calList').innerHTML =
+        '<div class="cal-list-head"><h3>' + label + ' · ' + list.length + ' 场</h3>' +
+          (calDay ? '<button class="cal-clear" type="button" data-clear="1">清除筛选 ×</button>' :
+                    '<span class="cl-meta">按时间正序</span>') + '</div>' +
+        '<div class="cs-list">' + (list.map(card).join('') ||
+          '<div class="empty">这个月还没有收录场次。</div>') + '</div>';
+    }
+
+    var jumps = monthKeys.map(function (k) {
+      return '<button class="cal-jump' + (k === month ? ' on' : '') + '" type="button" data-goto="' +
+        k + '">' + (+k.slice(5)) + ' 月</button>';
+    }).join('') + '<button class="cal-jump" type="button" data-goto="latest">最新</button>';
+
+    app.innerHTML =
+      '<section class="cal">' +
+        '<div class="cal-head">' +
+          '<div class="kicker">ARCHIVE CALENDAR</div>' +
+          '<h2 class="cal-title">存档日历</h2>' +
+          '<p class="cal-lead">自 ' + esc(D.meta.firstDate) + ' 起的直播逐字稿，按开播日归档。</p>' +
+          '<div class="cal-facts">' +
+            '<span><b>' + D.sessions.length + '</b> 场</span>' +
+            '<span><b>' + dayKeys.length + '</b> 天</span>' +
+            '<span><b>' + num(D.meta.total || D.records.length) + '</b> 条记录</span>' +
+            '<span>最长连续 <b>' + streak + '</b> 天</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="cal-bar">' +
+          '<div class="cal-nav">' +
+            '<button class="cal-arrow" type="button" data-goto="' + prevM + '"' +
+              (prevM ? '' : ' disabled') + ' aria-label="上个月">‹</button>' +
+            '<h3>' + monthLabel(month) + '<em>' + monthSessions.length + ' 场</em></h3>' +
+            '<button class="cal-arrow" type="button" data-goto="' + nextM + '"' +
+              (nextM ? '' : ' disabled') + ' aria-label="下个月">›</button>' +
+          '</div>' +
+          '<div class="cal-jumps">' + jumps + '</div>' +
+        '</div>' +
+        '<div class="cal-grid"><div class="cal-dow">' +
+          ['一', '二', '三', '四', '五', '六', '日'].map(function (w, idx) {
+            return '<span' + (idx >= 5 ? ' class="we"' : '') + '>周' + w + '</span>';
+          }).join('') +
+        '</div><div class="cal-cells">' + grid + '</div></div>' +
+        '<div class="cal-legend"><span><i></i>有直播</span><span>同一天多场会分行列出</span></div>' +
+        '<div class="cal-list" id="calList"></div>' +
+      '</section>';
+
+    app.querySelector('.cal-bar').addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-goto]');
+      if (!b || b.disabled) return;
+      var g = b.getAttribute('data-goto');
+      if (g === 'latest') g = monthKeys[monthKeys.length - 1];
+      if (!g || g === month) return;
+      location.hash = '#/archive?m=' + g;
+    });
+    app.querySelector('.cal-grid').addEventListener('click', function (e) {
+      if (e.target.closest('.cal-chip')) return;   // 让格子里的链接自己跳
+      var cell = e.target.closest('.cal-cell.has');
+      if (!cell) return;
+      var k = cell.getAttribute('data-day');
+      calDay = (calDay === k) ? '' : k;
+      app.querySelectorAll('.cal-cell.sel').forEach(function (c) { c.classList.remove('sel'); });
+      if (calDay) cell.classList.add('sel');
+      renderCalList();
+    });
+    app.querySelector('.cal-list').addEventListener('click', function (e) {
+      if (!e.target.closest('[data-clear]')) return;
+      calDay = '';
+      app.querySelectorAll('.cal-cell.sel').forEach(function (c) { c.classList.remove('sel'); });
+      renderCalList();
+    });
+
+    renderCalList();
+    setFoot();
+  }
+
   /* ---------- archive ---------- */
   function renderArchive(sid, jumpT, initialQ) {
     if (sid == null || !D.sessions[sid]) sid = D.sessions.length - 1;
@@ -750,7 +935,7 @@
       }
     }
 
-    var side = D.sessions.map(function (s) {
+    var side = '<a class="sback" href="#/archive">‹ 存档日历</a>' + D.sessions.map(function (s) {
       var mini = s.ribbon.slice(0, 60).map(function (t) {
         return '<i style="flex:1;background:' + (t < 0 ? '#2a2521' : tcolor(t)) + '"></i>';
       }).join('');

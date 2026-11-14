@@ -241,6 +241,13 @@ CI：`.github/workflows/pages.yml`，`site/**` / `tools/**` 推送后自动 buil
 - 跳转参数：逐字稿 `#/archive/<sid>?t=<时间>`，摘录 `#/quotes?focus=<qid>`（`quoteCard` 带 DOM id，`renderQuotes` 放开筛选、渲染到目标并加 `.hit` 描边），日记 `#/diary/<key>`，场次 `#/archive/<sid>`；「查看全部逐字稿」走 `#/archive/<sid>?q=<关键词>`，`renderArchive` 预填 `#q` 并跑一次全库检索。
 - 页脚：作者 `Arkueid`（git 提交身份）与 GitHub 仓库 `hibane-hinome/live-archive` 是必须项，另有主播主页 / 直播间、著作权与准确性提示、更新信息。**不写备案 / 登记类信息**，也不要把实现细节搬回页脚（写作口径第 11 条）。
 
+### 存档日历（2026-11-15）
+
+- **`#/archive`（无第二段）= 日历索引页**（`renderCalendar`），**`#/archive/<sid>` = 单场逐字稿**（`renderArchive`）。首页「进存档 / 存档 →」落到日历；搜索、摘录、日记里的 `#/archive/<sid>` 深链不变。逐字稿侧栏顶部有 `.sback` 返回日历。
+- 月份只取**有场次的月**（从 `D.sessions[].dateLong` 聚合），`#/archive?m=YYYY-MM` 可深链；`?d=YYYY-MM-DD` 可预选某天。日筛选是页面内状态、不改 hash，避免换日时整页滚回顶部。别在月份之间插空白月，也别用固定 6 行硬凑格子。
+- 同一天可能有两场（白天场 + 深夜场），必须按 `dayKey(s) = dateLong.replace(/\./g,'-')` 聚合，不能按 `date`（`MM-DD` 无年份）或一对一映射。
+- 格内 `.cal-chip` 直接链到逐字稿；下方 `.cs-card` 给日记标题、色带与日记／逐字稿双入口。最长连续开播天数用 UTC 日序号算，别用本地毫秒差。
+
 ---
 
 ## 4. danmaku-it
