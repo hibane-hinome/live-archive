@@ -167,7 +167,7 @@
     state.q = '';
     state.hideEmpty = false;
     if (r.view === 'quotes') { setNav('quotes'); renderQuotes(); }
-    else if (r.view === 'archive') { setNav('archive'); renderArchive(r.sid, r.q.t); }
+    else if (r.view === 'archive') { setNav('archive'); renderArchive(r.sid, r.q.t, r.q.q || ''); }
     else if (r.view === 'diary') { setNav('diary'); renderDiary(r.seg1); }
     else if (r.view === 'tools') { setNav('tools'); renderTools(r.seg1); }
     else if (r.view === 'about') { setNav('about'); renderAbout(); }
@@ -517,6 +517,10 @@
 
   /* ---------- quotes ---------- */
   function renderQuotes() {
+    // 全站搜索跳到某段摘录时，放开筛选并保证目标那一条已经渲染出来
+    var focusId = parseHash().q.focus || '';
+    var focusQ = focusId ? D.quotes.filter(function (x) { return x.id === focusId; })[0] : null;
+    if (focusQ) { state.tag = '全部'; state.qs = 'all'; }
     var tags = ['全部'];
     D.quotes.forEach(function (q) { if (tags.indexOf(q.tag) < 0) tags.push(q.tag); });
     var counts = {};
@@ -576,11 +580,20 @@
       renderQuoteList(true);
     });
     renderQuoteList(true);
+    if (focusQ) {
+      state.qShown = Math.max(QBATCH, D.quotes.indexOf(focusQ) + 1);
+      renderQuoteList(false);
+      // route() 末尾会把页面滚回顶部，等下一帧再落到目标摘录上
+      requestAnimationFrame(function () {
+        var el = document.getElementById(focusId);
+        if (el) { el.classList.add('hit'); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+      });
+    }
     setFoot();
   }
 
   function quoteCard(q) {
-    return '<article class="quote">' +
+    return '<article class="quote" id="' + q.id + '">' +
       '<div class="qside">' +
         '<span class="tag"' + tagStyle(q.tag) + '>' + esc(q.tag) + '</span>' +
         '<a class="qtime" href="#/archive/' + q.s + '?t=' + encodeURIComponent(q.t) + '">' +
@@ -641,7 +654,7 @@
   });
 
   /* ---------- archive ---------- */
-  function renderArchive(sid, jumpT) {
+  function renderArchive(sid, jumpT, initialQ) {
     if (sid == null || !D.sessions[sid]) sid = D.sessions.length - 1;
     var cur = sess(sid);
     var startH = parseInt(cur.start.split(':')[0], 10);
@@ -804,6 +817,8 @@
       '</div>';
 
     var input = document.getElementById('q');
+    // 全站搜索的「查看全部逐字稿」会带上 ?q=，进页面就先跑一次全库检索
+    if (initialQ) { state.q = initialQ; input.value = initialQ; }
     input.addEventListener('input', function () {
       state.q = input.value.trim();
       renderList(sid);
@@ -1026,10 +1041,6 @@
     var diaryN = D.meta.diaryCount || (D.diary ? D.diary.length : 0);
     app.innerHTML =
       '<section class="about">' +
-        '<figure class="about-art">' +
-          '<img src="brand/scene-spring.webp" alt="形象插画" decoding="async">' +
-          '<figcaption>装饰插图</figcaption>' +
-        '</figure>' +
         '<div class="kicker">ABOUT THIS ARCHIVE</div>' +
         '<h2>关于<span class="accent">这份存档</span></h2>' +
         '<p class="about-lead">把 <b>' + esc(D.meta.streamer) + '</b> 直播里说过的话留下来：逐字稿、每场日记、' +
@@ -1267,4 +1278,216 @@
   tick();
   fill(bar, 0);
   if (!st.paused) start();
+})();
+
+/* ---------- 全站搜索 ----------
+   独立于 hash 路由的浮层：一次遍历 window.DATA，跨逐字稿 / 摘录 / 日记 / 场次
+   做不区分大小写的子串匹配。逐字稿一万多条，输入做 120ms 防抖、每组只渲染
+   前几条，避免边打字边拼大量 DOM；结果直接跳到对应页面并带上定位参数。 */
+(function () {
+  'use strict';
+  var D = window.DATA;
+  var openBtn = document.getElementById('searchOpen');
+  var dlg = document.getElementById('searchDlg');
+  var mask = document.getElementById('searchMask');
+  var input = document.getElementById('searchInput');
+  var box = document.getElementById('searchResults');
+  var cnt = document.getElementById('searchCount');
+  var scope = document.getElementById('searchScope');
+  if (!D || !openBtn || !dlg || !mask || !input || !box) return;
+
+  var LIMIT = { rec: 8, quote: 6, diary: 5, session: 4 };
+  var items = [], sel = -1, timer = 0;
+
+  function escS(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function markEsc(s, q) {
+    var out = '', lower = s.toLowerCase(), ql = q.toLowerCase(), p = 0, i;
+    while (ql && (i = lower.indexOf(ql, p)) >= 0) {
+      out += s.slice(p, i) + '<mark>' + s.slice(i, i + ql.length) + '</mark>';
+      p = i + ql.length;
+    }
+    return out + s.slice(p);
+  }
+  function snip(text, q, len) {
+    var s = String(text || '').replace(/\s+/g, ' ');
+    var i = s.toLowerCase().indexOf(q.toLowerCase());
+    if (i < 0) return s.slice(0, len);
+    var from = Math.max(0, i - 22);
+    return (from ? '…' : '') + s.slice(from, from + len) + (s.length > from + len ? '…' : '');
+  }
+  function has(text, ql) { return String(text || '').toLowerCase().indexOf(ql) >= 0; }
+  function sessOf(i) { return D.sessions[i] || { date: '', dateLong: '', week: '' }; }
+  function dText(d) { return [d.title, d.tagline, d.summary, (d.body || []).join(' ')].join(' '); }
+
+  if (scope) {
+    scope.textContent = D.meta.total.toLocaleString('en-US') + ' 条逐字稿 · ' +
+      D.meta.quoteCount + ' 段摘录 · ' + D.meta.diaryCount + ' 篇日记';
+  }
+
+  function collect(q) {
+    var ql = q.toLowerCase(), groups = [], recTotal = 0;
+
+    var recRows = [];
+    for (var i = D.records.length - 1; i >= 0; i--) {   // 新场次优先
+      var r = D.records[i];
+      if (has(r.jp, ql) || has(r.zh, ql)) {
+        recTotal++;
+        if (recRows.length < LIMIT.rec) {
+          var s = sessOf(r.s);
+          // 命中日文就主显示日文，命中译文就主显示译文，避免高亮落在看不见的地方
+          var main = has(r.zh, ql) ? r.zh : (r.jp || r.zh || '');
+          var sub = has(r.zh, ql) ? (r.jp || '') : (r.zh || '');
+          recRows.push({
+            label: '逐字稿', meta: s.date + ' ' + r.t,
+            text: snip(main, q, 68), sub: sub ? snip(sub, q, 68) : '',
+            href: '#/archive/' + r.s + '?t=' + encodeURIComponent(r.t)
+          });
+        }
+      }
+    }
+    if (recTotal) groups.push({ name: '逐字稿', total: recTotal, rows: recRows });
+
+    var qRows = [], qTotal = 0;
+    D.quotes.forEach(function (x) {
+      if (!has(x.jp + ' ' + x.zh + ' ' + x.note + ' ' + x.tag, ql)) return;
+      qTotal++;
+      if (qRows.length < LIMIT.quote) {
+        var qmain = has(x.zh, ql) ? x.zh : (has(x.jp, ql) ? x.jp : x.zh);
+        var qsub = qmain === x.zh ? x.jp : x.zh;
+        qRows.push({
+          label: '摘录 · ' + x.tag, meta: x.date + ' ' + x.t,
+          text: snip(qmain, q, 68), sub: snip(qsub, q, 68),
+          href: '#/quotes?focus=' + encodeURIComponent(x.id)
+        });
+      }
+    });
+    if (qTotal) groups.push({ name: '摘录', total: qTotal, rows: qRows });
+
+    var dRows = [], dTotal = 0;
+    D.diary.forEach(function (d) {
+      if (!has(dText(d), ql)) return;
+      dTotal++;
+      if (dRows.length < LIMIT.diary) dRows.push({
+        label: '日记', meta: d.dateLong + ' ' + d.week,
+        text: snip(d.title + ' — ' + (d.summary || (d.body || [])[0] || ''), q, 68),
+        sub: '', href: '#/diary/' + encodeURIComponent(d.key)
+      });
+    });
+    if (dTotal) groups.push({ name: '日记', total: dTotal, rows: dRows });
+
+    var sRows = [], sTotal = 0;
+    D.sessions.forEach(function (s) {
+      if (!has(s.date + ' ' + s.dateLong + ' ' + s.week + ' ' + s.start + ' ' + s.end, ql)) return;
+      sTotal++;
+      if (sRows.length < LIMIT.session) sRows.push({
+        label: '场次', meta: s.week,
+        text: s.dateLong + ' · ' + s.start + ' – ' + s.end + ' · ' + s.count + ' 条记录',
+        sub: '', href: '#/archive/' + s.id
+      });
+    });
+    if (sTotal) groups.push({ name: '场次', total: sTotal, rows: sRows });
+
+    return { groups: groups, recTotal: recTotal };
+  }
+
+  function render(q) {
+    items = []; sel = -1;
+    if (!q) {
+      box.innerHTML = '<div class="sd-empty">输入关键词，检索逐字稿、摘录、日记与场次。</div>';
+      if (cnt) cnt.textContent = '输入关键词开始检索';
+      return;
+    }
+    var res = collect(q), html = '', total = 0;
+    res.groups.forEach(function (g) {
+      total += g.total;
+      html += '<div class="sd-group"><div class="sd-gtitle"><b>' + escS(g.name) + '</b>' +
+        '<span>' + g.total + ' 条' + (g.total > g.rows.length ? ' · 显示前 ' + g.rows.length + ' 条' : '') + '</span></div>';
+      g.rows.forEach(function (row) {
+        var idx = items.length;
+        items.push(row);
+        html += '<button class="sd-item" data-i="' + idx + '" type="button">' +
+          '<div class="si-top"><em>' + escS(row.label) + '</em>' + escS(row.meta) + '</div>' +
+          '<div class="si-text">' + markEsc(escS(row.text), q) + '</div>' +
+          (row.sub ? '<div class="si-sub">' + markEsc(escS(row.sub), q) + '</div>' : '') + '</button>';
+      });
+      html += '</div>';
+    });
+    if (res.recTotal > LIMIT.rec) {
+      var k = items.length;
+      items.push({ href: '#/archive/' + D.sessions[D.sessions.length - 1].id + '?q=' + encodeURIComponent(q) });
+      html += '<div class="sd-group"><button class="sd-item" data-i="' + k + '" type="button">' +
+        '<div class="si-text">在逐字稿里查看全部 ' + res.recTotal + ' 条结果 →</div></button></div>';
+    }
+    box.innerHTML = html || '<div class="sd-empty">没有找到「' + escS(q) + '」。</div>';
+    if (cnt) cnt.textContent = '共 ' + total + ' 条结果';
+  }
+
+  function highlight() {
+    var els = box.querySelectorAll('.sd-item');
+    for (var i = 0; i < els.length; i++) els[i].classList.toggle('on', i === sel);
+    if (sel >= 0 && els[sel]) els[sel].scrollIntoView({ block: 'nearest' });
+  }
+  function open() {
+    dlg.hidden = false; mask.hidden = false;
+    document.body.classList.add('search-open');
+    input.value = ''; render('');
+    setTimeout(function () { input.focus(); }, 0);
+  }
+  function close() {
+    dlg.hidden = true; mask.hidden = true;
+    document.body.classList.remove('search-open');
+    input.blur();
+  }
+  function go(it) {
+    close();
+    location.hash = it.href;
+  }
+
+  openBtn.addEventListener('click', open);
+  mask.addEventListener('click', close);
+  var closeBtn = document.getElementById('searchClose');
+  if (closeBtn) closeBtn.addEventListener('click', close);
+  input.addEventListener('input', function () {
+    clearTimeout(timer);
+    var v = input.value.trim();
+    timer = setTimeout(function () { render(v); }, 120);
+  });
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (!items.length) return;
+      sel = e.key === 'ArrowDown' ? (sel + 1) % items.length : (sel - 1 + items.length) % items.length;
+      highlight();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      var it = items[sel >= 0 ? sel : 0];
+      if (it) go(it);
+    } else if (e.key === 'Escape') {
+      close();
+    }
+  });
+  box.addEventListener('click', function (e) {
+    var b = e.target.closest('.sd-item');
+    if (!b) return;
+    var it = items[parseInt(b.getAttribute('data-i'), 10)];
+    if (it) go(it);
+  });
+  window.addEventListener('keydown', function (e) {
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+      e.preventDefault();
+      dlg.hidden ? open() : close();
+      return;
+    }
+    if (e.key === 'Escape' && !dlg.hidden) { close(); return; }
+    if (e.key !== '/' || e.metaKey || e.ctrlKey || !dlg.hidden) return;
+    var tag = (document.activeElement && document.activeElement.tagName) || '';
+    if (/INPUT|TEXTAREA/.test(tag)) return;
+    if (document.getElementById('q')) return;   // 存档页有自己的搜索框
+    e.preventDefault();
+    open();
+  });
 })();

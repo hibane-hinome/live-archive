@@ -53,17 +53,33 @@
     <a href="#/tools" data-nav="tools">工具</a>
     <a href="#/about" data-nav="about">关于</a>
   </nav>
+  <button class="nav-search" id="searchOpen" type="button" title="全站搜索 (Ctrl+K)" aria-label="打开全站搜索">
+    <span class="ns-ico" aria-hidden="true">&#8983;</span>
+    <span class="ns-text">搜索</span>
+    <kbd>Ctrl K</kbd>
+  </button>
 </header>
 
 <main id="app"></main>
 
 <footer class="foot">
-  <span class="foot-links">
-    <a href="https://space.bilibili.com/2094031249" target="_blank" rel="noopener">主播 B 站主页</a>
-    <a href="https://live.bilibili.com/22748536" target="_blank" rel="noopener">直播间</a>
-  </span>
-  <span>自动识别与翻译 · 未逐条校对</span>
-  <span id="footMeta"></span>
+  <div class="foot-top">
+    <div class="foot-id">
+      <strong>{{STREAMER}} · 直播存档</strong>
+      <span>非官方粉丝整理 · 中日对照的逐字稿、日记与摘录</span>
+    </div>
+    <div class="foot-links">
+      <a href="https://github.com/hibane-hinome/live-archive" target="_blank" rel="noopener">GitHub 仓库</a>
+      <a href="https://space.bilibili.com/2094031249" target="_blank" rel="noopener">主播主页</a>
+      <a href="https://live.bilibili.com/22748536" target="_blank" rel="noopener">直播间</a>
+    </div>
+  </div>
+  <div class="foot-bot">
+    <span>整理与维护：<b>Arkueid</b></span>
+    <span>内容著作权归主播及原权利人所有，如权利人要求删除，本站会配合处理。</span>
+    <span>逐字稿与译文未逐条校对，引用前请回看原直播。</span>
+    <span id="footMeta"></span>
+  </div>
 </footer>
 
 <!-- 背景音乐：贴在右侧边缘的固定浮层，折叠后只留 "<" 把手。
@@ -93,6 +109,22 @@
   </div>
 </aside>
 <audio id="bgmAudio" src="audio/mata-ashita.mp3" loop preload="none"></audio>
+
+<!-- 全站搜索：独立于 hash 路由的浮层，跨逐字稿 / 摘录 / 日记 / 场次检索 -->
+<div class="sd-mask" id="searchMask" hidden></div>
+<section class="sd" id="searchDlg" role="dialog" aria-modal="true" aria-label="全站搜索" hidden>
+  <div class="sd-head">
+    <span class="sd-ico" aria-hidden="true">&#8983;</span>
+    <input id="searchInput" type="text" placeholder="搜索逐字稿、摘录、日记、场次…" autocomplete="off" spellcheck="false" aria-label="搜索关键词">
+    <button class="sd-esc" id="searchClose" type="button" aria-label="关闭搜索">Esc</button>
+  </div>
+  <div class="sd-hint">跨逐字稿 / 摘录 / 日记 / 场次检索 · ↑↓ 选择 · 回车打开 · Esc 关闭</div>
+  <div class="sd-body" id="searchResults"></div>
+  <div class="sd-foot">
+    <span id="searchCount">输入关键词开始检索</span>
+    <span id="searchScope"></span>
+  </div>
+</section>
 
 <script src="assets/data.js?v={{V}}"></script>
 <script src="assets/app.js?v={{V}}"></script>

@@ -211,7 +211,7 @@ CI：`.github/workflows/pages.yml`，`site/**` / `tools/**` 推送后自动 buil
 
 | 文件 | 用途 |
 |---|---|
-| `scene-spring.webp` | 全站氛围底图（`.amb-scene`，压暗 + 视差）；关于页横幅用它亮一次原图 |
+| `scene-spring.webp` | 非首页栏目的氛围底图（`.amb-scene`，压暗 + 视差）；关于页头图已下线（2026-11-15 用户指定，避免和背景重复） |
 | `home-night.webp` | 首页专属夜景，由 `body.is-home` 切换 `--scene`，左侧留白给文字 |
 | `home-night-far.webp` | 首页远景层（`.amb-far`），`blur(7px)` / `brightness(.82)` / `saturate(.85)` 已烘进图，约 9 KB |
 
@@ -227,6 +227,19 @@ CI：`.github/workflows/pages.yml`，`site/**` / `tools/**` 推送后自动 buil
 - **光晕用位移不用改渐变中心**。`.amb-light` 是固定 1120px 的渐变圆，靠 `translate3d` 跟随鼠标；若改回 `radial-gradient(... at var(--lx) var(--ly))`，每帧都要重绘整屏渐变。
 - **运行时不做大面积 blur / backdrop-filter**。远景模糊预烘进 `home-night-far.webp`；sticky header 与音乐面板不用 `backdrop-filter`（背景每帧在动，会强制逐帧重采样），改用接近不透明的实色。
 - 各层带 `will-change:transform` 固定在合成层上；`grain` 用 `translateZ(0)` 单独提升，避免跟着背景重绘。低通系数 `0.13`、收敛阈值 `0.005`，鼠标停下即停 rAF。
+
+### 话题分类（2026-11-15 扩充到 23 类）
+
+- `tools/common.py` 的 `TOPICS` 是关键词表，`classify()` **按表顺序取第一个命中的正则**，都不中就落 `日常杂聊`。新增的 7 类（宠物/动物、音乐/唱歌、文字/词源、应援/比赛、周年/纪念、开播/收尾、中日文化）一律排在原有类别之后，避免抢走既有分类；正则要足够具体，别用「とり」「歌」这种会吃掉大量无关记录的宽词。
+- **改表后必须重跑 `python tools/export.py`**：每条记录的 `tp` 和每场的 `topics` / `ribbon` / `segs` 都是导出时算好写进 `site/data/sessions/*.json` 的。只改表不重导出，新类别永远 0 命中，而且 `OTHER_ID` 后移会让旧 `tp` 语义错位。重导出是幂等的，场次与记录正文不变，不要手改 sessions 文件。
+- 前端 `D.topics` 由 `common.TOPIC_NAMES` 生成，首页「话题标签」数字就是它的长度；话题分布条按 `D.records[].tp` 计数，两列 grid 会自动容纳更多类别。
+
+### 全站搜索与页脚（2026-11-15）
+
+- 搜索是 `index.html` 里**独立于 hash 路由**的浮层（`.sd`）+ `app.js` 末尾独立 IIFE，数据全来自 `window.DATA`，分逐字稿 / 摘录 / 日记 / 场次四组。输入 120ms 防抖、每组限量；一万多条逐字稿每次全量扫一遍但只渲染前 8 条。命中日文就主显示日文、命中译文就主显示译文，两行都高亮。
+- 入口：导航右侧按钮、`Ctrl/Cmd+K`；非存档页按 `/` 也打开（存档页的 `/` 仍聚焦它自己的 `#q`）。↑↓ 选择、回车打开、Esc / 点遮罩关闭。
+- 跳转参数：逐字稿 `#/archive/<sid>?t=<时间>`，摘录 `#/quotes?focus=<qid>`（`quoteCard` 带 DOM id，`renderQuotes` 放开筛选、渲染到目标并加 `.hit` 描边），日记 `#/diary/<key>`，场次 `#/archive/<sid>`；「查看全部逐字稿」走 `#/archive/<sid>?q=<关键词>`，`renderArchive` 预填 `#q` 并跑一次全库检索。
+- 页脚：作者 `Arkueid`（git 提交身份）与 GitHub 仓库 `hibane-hinome/live-archive` 是必须项，另有主播主页 / 直播间、著作权与准确性提示、更新信息。**不写备案 / 登记类信息**，也不要把实现细节搬回页脚（写作口径第 11 条）。
 
 ---
 
