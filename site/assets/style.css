@@ -15,7 +15,10 @@
   --jp:"Hiragino Mincho ProN","Yu Mincho","Songti SC","Noto Serif SC",serif;
   --sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
   --mono:"SF Mono",ui-monospace,"Cascadia Mono",Menlo,monospace;
+  --scene:url("brand/scene-spring.webp");
 }
+/* 首页换一张无人物、左侧留白的夜景，其他栏目沿用原来的插画 */
+body.is-home{--scene:url("brand/home-night.webp")}
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
 body{
@@ -50,22 +53,41 @@ button{font-family:inherit;color:inherit;background:none;border:none;cursor:poin
 
 /* ---------- 氛围层 ----------
    全部 fixed 且 pointer-events:none，位于 main(z=2) 之下，不挡文字也不吃点击。
-   视差由 JS 写 --dx/--dy/--lx/--ly/--rot，各层用不同倍率做出景深：
-   场景最慢、灯尘最快、立绘反向移动，像镜头在轻微平移。 */
+   伪 3D 靠两件事：各层按「深度」用不同倍率/方向位移，以及轻微的 rotateX/rotateY
+   透视倾斜（JS 写 --dx/--dy/--rx/--ry/--lx/--ly/--rot）。远层最慢并带景深模糊，
+   灯尘最快，立绘反向移动，镜头一动就像有几层空间。 */
 .ambient{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
-.amb-scene{
-  position:absolute;inset:-4%;
-  background:url("brand/scene-spring.webp") center 38%/cover no-repeat;
-  opacity:.44;filter:brightness(.72) saturate(.9);
-  transform:translate3d(var(--dx,0px),var(--dy,0px),0) scale(1.05);
+/* 远景：同一张图放大、模糊、压暗，只跟一点点鼠标，首页才启用 */
+.amb-far{
+  display:none;position:absolute;inset:-10%;
+  background:var(--scene) center 42%/cover no-repeat;
+  opacity:.36;filter:blur(7px) brightness(.82) saturate(.85);
+  transform:perspective(1400px) rotateX(calc(var(--rx,0deg) * .3)) rotateY(calc(var(--ry,0deg) * .3))
+            translate3d(calc(var(--dx,0px) * .32),calc(var(--dy,0px) * .26),0) scale(1.2);
   will-change:transform;
 }
+body.is-home .amb-far{display:block}
+.amb-scene{
+  position:absolute;inset:-4%;
+  background:var(--scene) center 38%/cover no-repeat;
+  opacity:.44;filter:brightness(.72) saturate(.9);
+  transform:perspective(1100px) rotateX(calc(var(--rx,0deg) * .55)) rotateY(calc(var(--ry,0deg) * .55))
+            translate3d(var(--dx,0px),var(--dy,0px),0) scale(1.08);
+  will-change:transform;
+}
+/* 新夜景本来就暗，首页别再按亮插画那套压；左侧仍压重一点托住白字 */
+body.is-home .amb-scene{opacity:.82;filter:brightness(1.12) saturate(.95)}
 /* 左侧压得比右侧重：文字主要在左半边与居中栏，不能让插画抢对比度 */
 .amb-veil{
   position:absolute;inset:0;
   background:
     linear-gradient(90deg,rgba(10,8,7,.88) 0%,rgba(10,8,7,.66) 38%,rgba(10,8,7,.34) 74%,rgba(10,8,7,.60) 100%),
     linear-gradient(180deg,rgba(10,8,7,.58) 0%,transparent 32%,transparent 62%,rgba(10,8,7,.78) 100%);
+}
+body.is-home .amb-veil{
+  background:
+    linear-gradient(90deg,rgba(10,8,7,.82) 0%,rgba(10,8,7,.50) 38%,rgba(10,8,7,.08) 74%,rgba(10,8,7,.28) 100%),
+    linear-gradient(180deg,rgba(10,8,7,.44) 0%,transparent 34%,transparent 62%,rgba(10,8,7,.72) 100%);
 }
 .amb-light{
   position:absolute;inset:0;mix-blend-mode:screen;
@@ -74,7 +96,7 @@ button{font-family:inherit;color:inherit;background:none;border:none;cursor:poin
 }
 .amb-embers{
   position:absolute;inset:0;
-  transform:translate3d(calc(var(--dx,0px) * 2.2),calc(var(--dy,0px) * 1.4),0);
+  transform:translate3d(calc(var(--dx,0px) * 3),calc(var(--dy,0px) * 2),0);
 }
 .amb-embers i{
   position:absolute;left:var(--l);bottom:-24px;width:var(--s);height:var(--s);
@@ -91,7 +113,8 @@ button{font-family:inherit;color:inherit;background:none;border:none;cursor:poin
 .amb-char{
   position:absolute;right:0;bottom:0;height:clamp(230px,36vh,400px);
   opacity:.72;transition:opacity .65s ease;
-  transform:translate3d(calc(var(--dx,0px) * -1.7),calc(var(--dy,0px) * -0.55),0) rotate(var(--rot,0deg));
+  transform:perspective(900px) rotateY(calc(var(--ry,0deg) * -.35))
+            translate3d(calc(var(--dx,0px) * -2.3),calc(var(--dy,0px) * -.8),0) rotate(var(--rot,0deg));
   will-change:transform;
 }
 .amb-char img{
@@ -185,6 +208,11 @@ main{position:relative;z-index:2;max-width:1240px;margin:0 auto;padding:0 40px 9
   border:1px solid var(--line);position:relative;overflow:hidden;
   background:linear-gradient(178deg,rgba(255,255,255,.052),rgba(255,255,255,.012) 62%,rgba(255,122,69,.035));
 }
+/* 包一层再倾斜：.hero-side 自己要用 transform 做淡入，两者会打架 */
+.hs-tilt{
+  transform:perspective(900px) rotateX(calc(var(--rx,0deg) * -.45)) rotateY(calc(var(--ry,0deg) * -.45));
+  transition:transform .22s ease-out;
+}
 /* 暖光放在左下角，别压住标题行与右上角的计数 */
 .hero-side::after{
   content:"";position:absolute;left:-70px;bottom:-110px;width:210px;height:210px;border-radius:50%;
@@ -275,7 +303,8 @@ main{position:relative;z-index:2;max-width:1240px;margin:0 auto;padding:0 40px 9
     radial-gradient(120% 220% at 0% 0%,rgba(255,122,69,.16),rgba(255,122,69,0) 52%),
     linear-gradient(180deg,rgba(255,255,255,.062),rgba(255,255,255,.014));
   box-shadow:0 26px 54px -40px rgba(0,0,0,.95),inset 0 1px 0 rgba(255,255,255,.05);
-  transition:border-color .25s,box-shadow .25s;
+  transform:perspective(900px) rotateX(calc(var(--rx,0deg) * -.3)) rotateY(calc(var(--ry,0deg) * -.3));
+  transition:transform .22s ease-out,border-color .25s,box-shadow .25s;
 }
 .hero-links:hover{border-color:rgba(255,122,69,.34);box-shadow:0 30px 60px -40px rgba(255,122,69,.35),inset 0 1px 0 rgba(255,255,255,.06)}
 a.hl{
@@ -1055,7 +1084,8 @@ a.dentry.dmini .dlinks{margin-top:16px;padding-top:13px}
   .tbar .fill{transition:none;width:var(--w)}
   .qcard:hover{transform:none}
   /* 氛围层保留静态画面，关掉一切位移与粒子 */
-  .amb-scene,.amb-char,.amb-embers{transform:none}
+  .amb-far,.amb-scene,.amb-char,.amb-embers,.hero-links,.hs-tilt{transform:none}
+  .hero-links,.hs-tilt{transition:none}
   .amb-char img,.about-art img{animation:none}
   .amb-embers{display:none}
   .amb-light{display:none}

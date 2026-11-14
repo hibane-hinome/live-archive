@@ -10,10 +10,12 @@
 <link rel="mask-icon" href="brand/avatar.svg" color="#ff7a45">
 <link rel="stylesheet" href="assets/style.css?v={{V}}">
 </head>
-<body>
-<!-- 氛围层：场景图 → 压暗遮罩 → 跟随鼠标的暖光 → 上浮灯尘 → 右下角立绘。
-     整层不吃鼠标事件，也不参与布局；JS 只在有精确指针的系统上启用视差。 -->
+<body class="is-home">
+<!-- 氛围层：远景 → 场景 → 压暗遮罩 → 跟随鼠标的暖光 → 上浮灯尘 → 右下角立绘。
+     整层不吃鼠标事件，也不参与布局；JS 只在有精确指针的系统上启用多层视差与伪 3D 倾斜。
+     首页用 home-night.webp（无人物、左侧留白），其余页沿用 scene-spring.webp。 -->
 <div class="ambient" aria-hidden="true">
+  <div class="amb-far"></div>
   <div class="amb-scene"></div>
   <div class="amb-veil"></div>
   <div class="amb-light"></div>

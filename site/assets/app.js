@@ -158,6 +158,8 @@
     document.querySelectorAll('.nav a').forEach(function (a) {
       a.classList.toggle('on', a.getAttribute('data-nav') === view);
     });
+    // 首页换一张专属夜景，离开首页立刻切回原插画
+    document.body.classList.toggle('is-home', view === 'home');
   }
 
   function route() {
@@ -298,9 +300,11 @@
           '</div>' +
         '</div>' +
         '<aside class="hero-side rv" id="topicSide">' +
-          '<div class="hs-head"><b>话题分布</b><em>' + D.topics.length + ' 类</em></div>' +
-          '<div class="tbars">' + topicBarsHTML() + '</div>' +
-          '<div class="hs-foot">' + num(D.meta.total) + ' 条记录的关键词归类 · 按条数排序</div>' +
+          '<div class="hs-tilt">' +
+            '<div class="hs-head"><b>话题分布</b><em>' + D.topics.length + ' 类</em></div>' +
+            '<div class="tbars">' + topicBarsHTML() + '</div>' +
+            '<div class="hs-foot">' + num(D.meta.total) + ' 条记录的关键词归类 · 按条数排序</div>' +
+          '</div>' +
         '</aside>' +
 
         // 首屏收在一段大引言上：一进来就能看到一句真正的原话
@@ -1065,8 +1069,9 @@
   route();
 })();
 
-/* ---------- 氛围视差 ----------
-   鼠标位置经一阶低通再写进 CSS 变量，各层用不同倍率位移形成景深。
+/* ---------- 氛围视差 / 伪 3D ----------
+   鼠标位置经一阶低通再写进 CSS 变量：--dx/--dy 是平面位移，--rx/--ry 是轻微
+   透视倾斜角，各层用不同倍率与方向消费它们，形成远中近的空间感。
    只在精确指针 + 未开启「减少动态效果」时运行；循环在追上目标后自动停，
    鼠标不动就不占 CPU。触屏/reduced-motion 下保留静态插画。 */
 (function () {
@@ -1084,7 +1089,9 @@
     root.style.setProperty('--dy', (-cy * 11).toFixed(2) + 'px');
     root.style.setProperty('--lx', (50 + cx * 48).toFixed(2) + '%');
     root.style.setProperty('--ly', (50 + cy * 42).toFixed(2) + '%');
-    root.style.setProperty('--rot', (cx * 1.4).toFixed(2) + 'deg');
+    root.style.setProperty('--rot', (cx * 2.2).toFixed(2) + 'deg');
+    root.style.setProperty('--rx', (-cy * 2.6).toFixed(2) + 'deg');
+    root.style.setProperty('--ry', (cx * 3.4).toFixed(2) + 'deg');
   }
   function frame() {
     cx += (tx - cx) * 0.085;
