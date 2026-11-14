@@ -17,7 +17,7 @@ import common
 import export_subs
 import pack_ext
 
-COPY = ['index.html', 'assets/app.js', 'assets/style.css', 'brand']
+COPY = ['index.html', 'assets/app.js', 'assets/style.css', 'brand', 'audio']
 
 # 构建时刻一律按北京时间算：CI 跑在 UTC，用本地时间会差 8 小时，页脚会看起来像没更新。
 BUILD_TZ = timezone(timedelta(hours=8))

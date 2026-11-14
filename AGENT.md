@@ -111,7 +111,8 @@ site/
   index.html              {{TITLE}} {{DESC}} {{STREAMER}} {{V}} 构建时替换
   assets/app.js           前端 hash 路由：#/ #/diary #/quotes #/archive #/about
   assets/style.css
-  brand/                 头像与 favicon
+  brand/                 头像、favicon、氛围底图与立绘
+  audio/                 背景音乐 mp3（build.py 的 COPY 一起复制，preload=none）
   data/profile.json       主播名 / 标题 / 描述
   data/diary.json         直播日记（人工写，最新在最前）
   data/quotes.json        摘录（人工挑，按 date + t 挂场次）

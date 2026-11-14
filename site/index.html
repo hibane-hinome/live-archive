@@ -65,6 +65,34 @@
   <span id="footMeta"></span>
 </footer>
 
+<!-- 背景音乐：贴在右侧边缘的固定浮层，折叠后只留 "<" 把手。
+     音频不预加载，等真正播放（或首次点击页面）才向服务器取。 -->
+<aside class="bgm" id="bgm" aria-label="背景音乐">
+  <button class="bgm-tab" id="bgmFold" type="button" aria-controls="bgmPanel" aria-expanded="true" title="收起播放器">
+    <span class="bgm-chev" aria-hidden="true">&gt;</span>
+    <span class="bgm-note" aria-hidden="true">&#9834;</span>
+  </button>
+  <div class="bgm-panel" id="bgmPanel">
+    <div class="bgm-head">
+      <span class="bgm-disc" aria-hidden="true"></span>
+      <span class="bgm-meta"><strong>また明日</strong><em>MATSU</em></span>
+    </div>
+    <div class="bgm-row">
+      <button class="bgm-play" id="bgmPlay" type="button" aria-label="播放" aria-pressed="false"><span class="bgm-ico" aria-hidden="true"></span></button>
+      <div class="bgm-seek">
+        <input class="bgm-bar" id="bgmBar" type="range" min="0" max="1000" step="1" value="0" aria-label="播放进度">
+        <span class="bgm-time"><span id="bgmNow">0:00</span> / <span id="bgmDur">--:--</span></span>
+      </div>
+    </div>
+    <div class="bgm-foot">
+      <button class="bgm-loop is-on" id="bgmLoop" type="button" aria-pressed="true" title="循环播放"><span aria-hidden="true">&#8635;</span> 循环</button>
+      <span class="bgm-vol-label">音量</span>
+      <input class="bgm-volume" id="bgmVol" type="range" min="0" max="100" step="1" value="40" aria-label="音量">
+    </div>
+  </div>
+</aside>
+<audio id="bgmAudio" src="audio/mata-ashita.mp3" loop preload="none"></audio>
+
 <script src="assets/data.js?v={{V}}"></script>
 <script src="assets/app.js?v={{V}}"></script>
 </body>

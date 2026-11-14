@@ -958,6 +958,96 @@ a.dentry.dmini .dlinks{margin-top:16px;padding-top:13px}
   .pager .pinfo{flex-basis:100%;margin-left:0}
 }
 
+/* ---------- 悬浮背景音乐 ----------
+   右侧抽屉：折叠时整块右移一个面板宽度，只留 "<" 把手贴在屏幕边缘。
+   fixed 且高于 header，翻页/滚动都跟着视口走；面板宽度用变量，折叠位移与它同源。 */
+.bgm{
+  --bgm-w:238px;
+  position:fixed;right:0;top:38%;z-index:60;
+  display:flex;align-items:stretch;
+  transform:translateX(0);
+  transition:transform .42s cubic-bezier(.22,.8,.25,1);
+  filter:drop-shadow(0 14px 30px rgba(0,0,0,.55));
+}
+.bgm.is-collapsed{transform:translateX(var(--bgm-w))}
+.bgm-tab{
+  width:32px;flex:0 0 32px;padding:10px 0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  background:rgba(22,18,16,.9);backdrop-filter:blur(12px);
+  border:1px solid var(--line-strong);border-right:none;border-radius:14px 0 0 14px;
+  color:var(--ink-2);transition:color .2s ease,background .2s ease;
+}
+.bgm-tab:hover{color:var(--fire-soft);background:rgba(38,26,20,.94)}
+.bgm-chev{font:600 16px/1 var(--mono)}
+.bgm-note{font-size:14px;line-height:1;color:var(--fire);opacity:.85}
+.bgm.is-playing .bgm-note{animation:bgmNote 1.4s ease-in-out infinite alternate}
+@keyframes bgmNote{from{transform:translateY(1px);opacity:.55}to{transform:translateY(-2px);opacity:1}}
+.bgm-panel{
+  width:var(--bgm-w);flex:0 0 var(--bgm-w);padding:14px 14px 12px;
+  background:rgba(22,18,16,.92);backdrop-filter:blur(16px) saturate(1.1);
+  border:1px solid var(--line-strong);border-right:none;
+}
+.bgm-head{display:flex;align-items:center;gap:10px;padding-bottom:11px;border-bottom:1px solid var(--line)}
+.bgm-disc{
+  width:26px;height:26px;flex:0 0 26px;border-radius:50%;
+  background:radial-gradient(circle at 50% 50%,var(--fire) 0 3px,#241a15 3.5px 5px,#100c0a 5.5px 100%);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.12),0 0 0 1px rgba(255,122,69,.18);
+}
+.bgm.is-playing .bgm-disc{animation:bgmSpin 4s linear infinite}
+@keyframes bgmSpin{to{transform:rotate(360deg)}}
+.bgm-meta{display:flex;flex-direction:column;line-height:1.35;min-width:0}
+.bgm-meta strong{font:600 14px/1.35 var(--jp);color:var(--ink)}
+.bgm-meta em{font:normal 11px/1.4 var(--sans);color:var(--dim);letter-spacing:.04em}
+.bgm-row{display:flex;align-items:center;gap:11px;padding:12px 0 10px}
+.bgm-play{
+  width:38px;height:38px;flex:0 0 38px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(255,122,69,.14);border:1px solid rgba(255,122,69,.45);
+  transition:background .2s ease,transform .2s ease;
+}
+.bgm-play:hover{background:rgba(255,122,69,.28);transform:scale(1.06)}
+.bgm-ico{
+  display:block;width:0;height:0;margin-left:3px;
+  border-left:10px solid var(--ink);
+  border-top:6px solid transparent;border-bottom:6px solid transparent;
+}
+.bgm.is-playing .bgm-ico{
+  width:10px;height:13px;margin-left:0;border:0;
+  border-left:3px solid var(--ink);border-right:3px solid var(--ink);
+}
+.bgm-seek{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.bgm-time{font:11px/1 var(--mono);color:var(--dim);text-align:right;white-space:nowrap}
+.bgm input[type=range]{
+  -webkit-appearance:none;appearance:none;width:100%;height:4px;margin:0;
+  border-radius:999px;cursor:pointer;outline:none;
+  background:linear-gradient(90deg,var(--fire) 0 var(--p,0%),rgba(255,255,255,.16) var(--p,0%) 100%);
+}
+.bgm input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:10px;height:10px;border:none;border-radius:50%;
+  background:var(--ink);box-shadow:0 0 0 3px rgba(255,122,69,.28);
+}
+.bgm input[type=range]::-moz-range-thumb{
+  width:10px;height:10px;border:none;border-radius:50%;
+  background:var(--ink);box-shadow:0 0 0 3px rgba(255,122,69,.28);
+}
+.bgm :focus-visible{outline:2px solid var(--fire-soft);outline-offset:3px}
+.bgm-foot{display:flex;align-items:center;gap:8px;padding-top:9px;border-top:1px solid var(--line)}
+.bgm-loop{
+  flex:0 0 auto;font-size:11px;padding:3px 8px;border-radius:999px;
+  border:1px solid var(--line-strong);color:var(--dim);
+  transition:color .2s ease,border-color .2s ease,background .2s ease;
+}
+.bgm-loop span{font-size:13px;vertical-align:-1px;margin-right:2px}
+.bgm-loop.is-on{color:var(--fire-soft);border-color:rgba(255,122,69,.5);background:rgba(255,122,69,.12)}
+.bgm-vol-label{font-size:11px;color:var(--dim-2);flex:0 0 auto}
+.bgm-volume{flex:1}
+@media(max-width:640px){
+  .bgm{--bgm-w:206px;top:auto;bottom:18px}
+  .bgm-tab{width:28px;flex-basis:28px}
+  .bgm-panel{padding:11px}
+  .bgm-vol-label{display:none}
+}
+
 /* 尊重系统「减少动态效果」：不做漂移与淡入，直接呈现终态 */
 @media(prefers-reduced-motion:reduce){
   .glow{animation:none}
@@ -969,4 +1059,6 @@ a.dentry.dmini .dlinks{margin-top:16px;padding-top:13px}
   .amb-char img,.about-art img{animation:none}
   .amb-embers{display:none}
   .amb-light{display:none}
+  .bgm,.bgm-tab,.bgm-play,.bgm-loop{transition:none}
+  .bgm.is-playing .bgm-disc,.bgm.is-playing .bgm-note{animation:none}
 }

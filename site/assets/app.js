@@ -1111,3 +1111,124 @@
   window.addEventListener('scroll', onScroll, { passive: true });
   onScroll();
 })();
+
+/* ---------- 悬浮背景音乐 ----------
+   默认循环播放；浏览器拦下自动播放时，等页面第一次点击/按键再起播。
+   折叠状态、音量、循环开关与用户主动暂停都记在 localStorage。 */
+(function () {
+  'use strict';
+  var box = document.getElementById('bgm');
+  var audio = document.getElementById('bgmAudio');
+  if (!box || !audio) return;
+  function $(id) { return document.getElementById(id); }
+  var fold = $('bgmFold'), panel = $('bgmPanel'), play = $('bgmPlay'), loop = $('bgmLoop');
+  var bar = $('bgmBar'), vol = $('bgmVol'), now = $('bgmNow'), dur = $('bgmDur');
+  var chev = fold.querySelector('.bgm-chev'), artist = box.querySelector('.bgm-meta em');
+  var KEY = 'hibane-bgm-v1';
+  var st = { collapsed: false, paused: false, vol: 40, loop: true };
+  var saved = null;
+  try { saved = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) {}
+  if (saved && typeof saved === 'object') {
+    st.collapsed = !!saved.collapsed;
+    st.paused = !!saved.paused;
+    st.loop = saved.loop !== false;
+    if (typeof saved.vol === 'number') st.vol = Math.max(0, Math.min(100, saved.vol));
+  } else if (window.innerWidth < 720) {
+    st.collapsed = true;                 // 窄屏先收起，别压住正文
+  }
+
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} }
+  function fmt(t) {
+    if (!isFinite(t) || t < 0) t = 0;
+    var m = Math.floor(t / 60), s = Math.floor(t % 60);
+    return m + ':' + (s < 10 ? '0' : '') + s;
+  }
+  function fill(el, ratio) { el.style.setProperty('--p', (ratio * 100).toFixed(2) + '%'); }
+
+  var waiting = null;
+  function disarm() {
+    if (!waiting) return;
+    window.removeEventListener('pointerdown', waiting);
+    window.removeEventListener('keydown', waiting);
+    waiting = null;
+    box.classList.remove('is-waiting');
+    if (artist) artist.textContent = 'MATSU';
+  }
+  function arm() {
+    if (waiting) return;
+    waiting = function (e) {
+      // 点播放器本身不算「页面交互」，交给对应按钮自己处理
+      if (e.target && e.target.closest && e.target.closest('.bgm')) return;
+      disarm();
+      if (!st.paused) start();
+    };
+    window.addEventListener('pointerdown', waiting);
+    window.addEventListener('keydown', waiting);
+    box.classList.add('is-waiting');
+    if (artist) artist.textContent = '点按页面任意处开始播放';
+  }
+  function start() {
+    disarm();
+    try {
+      var p = audio.play();
+      if (p && p.catch) p.catch(function () { if (!st.paused) arm(); });
+    } catch (e) { if (!st.paused) arm(); }
+  }
+
+  function paint() {
+    box.classList.toggle('is-collapsed', st.collapsed);
+    box.classList.toggle('is-playing', !audio.paused);
+    fold.setAttribute('aria-expanded', String(!st.collapsed));
+    chev.textContent = st.collapsed ? '<' : '>';
+    fold.title = st.collapsed ? '展开播放器' : '收起播放器';
+    panel.setAttribute('aria-hidden', String(st.collapsed));
+    if ('inert' in panel) panel.inert = st.collapsed;
+    play.setAttribute('aria-label', audio.paused ? '播放' : '暂停');
+    play.setAttribute('aria-pressed', String(!audio.paused));
+    loop.classList.toggle('is-on', st.loop);
+    loop.setAttribute('aria-pressed', String(st.loop));
+    audio.loop = st.loop;
+    audio.volume = st.vol / 100;
+    vol.value = st.vol;
+    fill(vol, st.vol / 100);
+  }
+  function tick() {
+    var d = audio.duration;
+    now.textContent = fmt(audio.currentTime);
+    if (d && isFinite(d)) {
+      dur.textContent = fmt(d);
+      bar.value = Math.round(audio.currentTime / d * 1000);
+      fill(bar, audio.currentTime / d);
+    }
+  }
+
+  fold.addEventListener('click', function () { st.collapsed = !st.collapsed; save(); paint(); });
+  play.addEventListener('click', function () {
+    if (audio.paused) { st.paused = false; save(); start(); }
+    else { st.paused = true; save(); audio.pause(); }
+    paint();
+  });
+  loop.addEventListener('click', function () { st.loop = !st.loop; save(); paint(); });
+  vol.addEventListener('input', function () {
+    st.vol = Number(vol.value);
+    audio.volume = st.vol / 100;
+    fill(vol, st.vol / 100);
+    save();
+  });
+  bar.addEventListener('input', function () {
+    var d = audio.duration;
+    if (!d || !isFinite(d)) return;
+    audio.currentTime = Number(bar.value) / 1000 * d;
+    fill(bar, Number(bar.value) / 1000);
+    now.textContent = fmt(audio.currentTime);
+  });
+  audio.addEventListener('timeupdate', tick);
+  audio.addEventListener('loadedmetadata', tick);
+  audio.addEventListener('play', paint);
+  audio.addEventListener('pause', paint);
+
+  paint();
+  tick();
+  fill(bar, 0);
+  if (!st.paused) start();
+})();
