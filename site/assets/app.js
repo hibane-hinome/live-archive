@@ -1768,3 +1768,39 @@
     open();
   });
 })();
+
+/* ---------- 回到顶部 ----------
+   滚过一屏才出现（首屏不占位），点击回顶；开关状态用 class + aria 同步，
+   隐藏时不进 Tab 序列。滚动监听 passive，并合到一次 rAF 里处理。 */
+(function () {
+  'use strict';
+  var btn = document.getElementById('toTop');
+  if (!btn) return;
+  var quiet = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var THRESHOLD = 480;
+  var shown = false, ticking = false;
+
+  function setShown(on) {
+    if (on === shown) return;
+    shown = on;
+    btn.classList.toggle('is-on', on);
+    btn.setAttribute('aria-hidden', String(!on));
+    btn.tabIndex = on ? 0 : -1;
+  }
+  function update() {
+    ticking = false;
+    setShown((window.pageYOffset || document.documentElement.scrollTop) > THRESHOLD);
+  }
+  window.addEventListener('scroll', function () {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(update);
+  }, { passive: true });
+
+  btn.addEventListener('click', function () {
+    window.scrollTo({ top: 0, behavior: quiet ? 'auto' : 'smooth' });
+    btn.blur();   // 回顶后按钮会隐藏，焦点别留在看不见的元素上
+  });
+
+  update();
+})();

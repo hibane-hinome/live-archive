@@ -11,20 +11,25 @@
 ```
 AGENT.md                 整条链路的总说明（库表结构、切场规则、坑、备份与重建），优先读这份
 config.toml              数据源与发布配置（db 路径、切场阈值、时间窗）
+package.json             Vite 构建（唯一的 npm 依赖就是 vite 本身）
+vite.config.mjs          dev server 与 dist 构建配置；构建前自动跑 tools/gen_data.py
 site/
-  index.html             页面骨架，构建时替换 {{TITLE}} {{DESC}} {{STREAMER}} {{V}}
-  assets/                app.js（前端路由与检索）、style.css
+  index.html             页面骨架，构建时替换 {{TITLE}} {{DESC}} {{STREAMER}}
+  assets/                app.js（ES module，前端路由与检索）、style.css
   brand/                 头像与 favicon
   data/
     profile.json         主播名、标题、站点描述
     diary.json           直播日记（人工整理的每场摘要，按 date 挂到场次）
     quotes.json          人工整理的对话摘录（按 date + 时间戳挂到对应场次）
     sessions/*.json       每场直播一份：话题带、目录、逐条记录
+    subs/*.json           插件用的双语字幕轨（插件按固定路径取，见下表）
 tools/
   common.py              配置、数据库读取、会话切分、话题分类
   export.py              db → site/data/sessions/*.json
-  build.py               site/ + data → dist/
+  gen_data.py            site/data → .build/：data.js、subs、插件 zip、版本号
+  build.py               调 Vite 构建 dist/（等价于 npm run build）
   publish.py             导出 → 校验 → git commit → push
+.build/                  构建前的数据暂存，不入库（gen_data.py 生成）
 ```
 
 ## 日常用法
@@ -46,11 +51,15 @@ publish.cmd --dry-run      :: 只报告会改什么，不写文件、不提交
 
 ```bash
 python tools/export.py                     # 从数据库同步场次（幂等，内容没变不落盘）
-python tools/build.py                      # 生成 dist/
-python -m http.server 8799 -d dist        # 本地预览，固定 8799（占住 dist/，重建前先停）
+npm run dev                               # 开发模式：http://localhost:8799/（改数据自动重产）
+npm run build                             # 生成 dist/（等价于 python tools/build.py）
+python -m http.server 8799 -d dist        # 预览构建产物，固定 8799（占住 dist/，重建前先停）
 python tools/publish.py                    # 导出 → 构建校验 → commit（默认不推送）
 python tools/publish.py --push             # 同上，但提交后推送
 ```
+
+首次使用或依赖变动后跑一次 `npm install`。`vite.config.mjs` 在 dev/build 启动时会自动调用
+`tools/gen_data.py` 产出 `data.js`、字幕轨与插件包，所以不需要单独执行；数据改动也会触发整页刷新。
 
 `publish.py` 的判断顺序：最后一条记录静默不足 `quiet_min`（默认 10 分钟）就认为还在直播，直接退出；
 导出后数据无变化则不提交；**默认不推送**——本地提交后由人工 review，确认后用 `--push` 推送
@@ -72,8 +81,10 @@ python tools/publish.py --push             # 同上，但提交后推送
 
 ## 部署
 
-GitHub Pages，Source 选 **GitHub Actions**。`.github/workflows/pages.yml` 在 `site/**` 或 `tools/**`
-有推送时构建 `dist/` 并发布。
+GitHub Pages，Source 选 **GitHub Actions**。`.github/workflows/pages.yml` 在 `site/**`、`tools/**`
+或构建配置（`package.json`、`vite.config.mjs`）有推送时，装好 Python 3.12 与 Node 22，
+执行 `npm ci && npm run build` 生成 `dist/` 并发布。CI 没有本地数据库，`gen_data.py` 会沿用
+仓库里已入库的 `site/data/subs`，因此不需要数据库也能构建成功。
 
 ## 说明
 

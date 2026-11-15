@@ -6,6 +6,9 @@ on:
     paths:
       - "site/**"
       - "tools/**"
+      - "package.json"
+      - "package-lock.json"
+      - "vite.config.mjs"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
@@ -27,8 +30,16 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+      - name: Install dependencies
+        run: npm ci
+      # 数据由 tools/gen_data.py 产出（无数据库时沿用已入库的 site/data/subs），
+      # 页面与静态资源由 Vite 打包；两条命令等价于原来的 python tools/build.py。
       - name: Build site
-        run: python tools/build.py
+        run: npm run build
       - uses: actions/configure-pages@v5
         with:
           enablement: true

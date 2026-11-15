@@ -107,22 +107,27 @@ raw_json TEXT            -- 整条原始 payload
 ```
 config.toml               ← 过期：指向旧 C# 库（见坑 1）
 publish.cmd               一键入口（导出+构建+本地提交）
+package.json              Vite 构建依赖（vite 本身）
+vite.config.mjs           dev server / dist 构建；启动时自动调 tools/gen_data.py
 site/
-  index.html              {{TITLE}} {{DESC}} {{STREAMER}} {{V}} 构建时替换
-  assets/app.js           前端 hash 路由：#/ #/diary #/quotes #/archive #/about
+  index.html              {{TITLE}} {{DESC}} {{STREAMER}} 构建时替换，版本号构建后注入
+  assets/app.js           ES module；前端 hash 路由：#/ #/diary #/quotes #/archive #/about
   assets/style.css
   brand/                 头像、favicon、氛围底图、首页夜景（--scene 切换）与预模糊远景
-  audio/                 背景音乐 mp3（build.py 的 COPY 一起复制，preload=none）
+  audio/                 背景音乐 mp3（gen_data.py 复制进 .build/public，preload=none）
   data/profile.json       主播名 / 标题 / 描述
   data/diary.json         直播日记（人工写，最新在最前）
   data/quotes.json        摘录（人工挑，按 date + t 挂场次）
   data/sessions/*.json    每场直播一份，脚本导出，**禁止手改**
+  data/subs/*.json        插件用的字幕轨（进 git；插件按固定路径取）
+.build/                   构建前的数据暂存（gitignore，gen_data.py 生成）
 tools/
   common.py               配置、读库、切场、话题分类（TOPICS 关键词表）
   export.py               db → site/data/sessions/
-  export_subs.py          db → dist/subs/（浏览器插件的双语字幕轨，build.py 自动调用）
-  pack_ext.py             extension/ → dist/download/*.zip（工具页的下载包，build.py 自动调用）
-  build.py                site/ → dist/（含 data.js、版本哈希、构建时刻、subs/）
+  gen_data.py             site/data → .build/：data.js、版本哈希、subs、插件 zip、静态资源
+  export_subs.py          db → site/data/subs/（gen_data.py 调用，再复制进 .build/public/subs）
+  pack_ext.py             extension/ → .build/public/download/*.zip（gen_data.py 调用）
+  build.py                调 Vite 构建 dist/（等价于 npm run build）
   publish.py              导出 → 构建 → commit（默认不 push）
 extension/                浏览器插件：看录播时叠双语字幕（见坑 12 与 extension/README.md）
 dist/                     构建产物，不入库，CI 重新生成
@@ -140,9 +145,12 @@ python tools/export.py
 python tools/export.py --dry-run          # 先看会改什么，「清掉」必须是 0
 
 # 构建 / 本地预览
+npm install                               # 首次或依赖变动后
+npm run dev                               # 开发模式：http://localhost:8799/（改 site/data 自动重产并刷新）
+npm run build                             # 产物 dist/（等价于 python tools/build.py）
 python tools/build.py                     # 页脚「更新于」= 本次构建时刻，自动写入，无需手改
 BUILD_TIME="2026.11.10 22:00" python tools/build.py   # 覆盖构建时刻（复现/调试用）
-python -m http.server 8799 -d dist        # 固定 8799
+python -m http.server 8799 -d dist        # 固定 8799（预览产物；dev server 也用这个端口，别同时开）
 
 # 发布（review 模式：只到本地提交）
 publish.cmd                 # 等价于 python tools/publish.py
@@ -153,7 +161,11 @@ publish.cmd --dry-run
 
 `publish.py` 的判断顺序：最后一条记录静默 < `quiet_min`（10 分钟）→ 认为还在播，退出；导出无变化 → 不提交；**默认不推送**。
 
-CI：`.github/workflows/pages.yml`，`site/**` / `tools/**` 推送后自动 build + deploy，约 40 秒生效。
+数据产出由 `vite.config.mjs` 在 dev/build 启动时调用 `tools/gen_data.py` 完成（`data.js`、版本哈希、
+subs、插件 zip 都落在 `.build/public/`），Vite 只负责打包与发布，产物路径与版本号规则和旧版一致。
+
+CI：`.github/workflows/pages.yml`，`site/**` / `tools/**` / 构建配置有推送后自动
+`npm ci && npm run build` + deploy，约 40 秒生效。CI 无数据库，沿用已入库的 `site/data/subs`。
 
 ### 切场规则（`common.py`）
 
@@ -325,7 +337,7 @@ cd D:/HibaneHinome/LiveTranslate
 2. 读完整逐字稿（`python -c` 从库里 dump 到 `.state/_dump_MMDD.txt`，再整篇读；别只看片段）
 3. 写 `site/data/diary.json`（最新在最前）
 4. 挑 `site/data/quotes.json`（行数对齐、`t` 用真实时间戳、`note` 不评价）
-5. `node --check site/assets/app.js && python tools/build.py`
+5. `python tools/build.py`（或 `npm run build`）
    - 不能有 `!! 找不到对应场次的摘录`
    - 版本哈希要变
 6. 起 `python -m http.server 8799 -d dist`，把页面交给用户看，**不截图自查**

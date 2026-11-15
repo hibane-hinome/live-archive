@@ -1,5 +1,9 @@
 # 构建产物
 dist/
+# Vite 的数据暂存（tools/gen_data.py 生成，dev 与 build 前重建）
+.build/
+# Node 依赖
+node_modules/
 # 发布脚本的运行状态与日志
 .state/
 # Python

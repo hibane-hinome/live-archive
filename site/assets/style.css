@@ -1268,6 +1268,28 @@ a.dentry.dmini .dlinks{margin-top:16px;padding-top:13px}
   .cs-go{justify-self:start}
 }
 
+/* ---------- 回到顶部 ----------
+   滚过一屏才出现，避免首屏多一个按钮；窄屏（音乐面板贴底）改到左下角。
+   与音乐面板同一套配色：深底、细边框、hover 转火色。 */
+.totop{
+  position:fixed;right:22px;bottom:26px;z-index:55;
+  width:44px;height:44px;padding:0;
+  display:grid;place-items:center;
+  background:rgba(22,18,16,.96);
+  border:1px solid var(--line-strong);border-radius:999px;
+  color:var(--ink-2);cursor:pointer;
+  opacity:0;visibility:hidden;transform:translateY(10px);
+  transition:opacity .26s ease,transform .26s ease,visibility .26s,color .2s,border-color .2s,background .2s;
+  filter:drop-shadow(0 10px 22px rgba(0,0,0,.5));
+}
+.totop.is-on{opacity:1;visibility:visible;transform:none}
+.totop:hover{color:var(--fire-soft);border-color:rgba(255,122,69,.45);background:rgba(255,122,69,.1)}
+.totop:focus-visible{outline:2px solid var(--fire-soft);outline-offset:3px}
+.totop svg{width:20px;height:20px;display:block}
+@media(max-width:640px){
+  .totop{left:18px;right:auto;bottom:18px;width:42px;height:42px}
+}
+
 /* 尊重系统「减少动态效果」：不做漂移与淡入，直接呈现终态 */
 @media(prefers-reduced-motion:reduce){
   .glow{animation:none}
@@ -1282,4 +1304,5 @@ a.dentry.dmini .dlinks{margin-top:16px;padding-top:13px}
   .bgm,.bgm-tab,.bgm-play,.bgm-loop{transition:none}
   .bgm.is-playing .bgm-disc,.bgm.is-playing .bgm-note{animation:none}
   .cal-cell,.cal-arrow,.cal-jump,.cal-field select,.cs-card,.cs-go,.cal-backtop{transition:none}
+  .totop{transition:none;transform:none}
 }
