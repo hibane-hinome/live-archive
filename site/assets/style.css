@@ -1034,7 +1034,7 @@ a.dentry.dmini .dlinks{margin-top:16px;padding-top:13px}
    右侧抽屉：折叠时整块右移一个面板宽度，只留 "<" 把手贴在屏幕边缘。
    fixed 且高于 header，翻页/滚动都跟着视口走；面板宽度用变量，折叠位移与它同源。 */
 .bgm{
-  --bgm-w:238px;
+  --bgm-w:358px;
   position:fixed;right:0;top:38%;z-index:60;
   display:flex;align-items:stretch;
   transform:translateX(0);
@@ -1070,6 +1070,7 @@ a.dentry.dmini .dlinks{margin-top:16px;padding-top:13px}
 .bgm-meta{display:flex;flex-direction:column;line-height:1.35;min-width:0}
 .bgm-meta strong{font:600 14px/1.35 var(--jp);color:var(--ink)}
 .bgm-meta em{font:normal 11px/1.4 var(--sans);color:var(--dim);letter-spacing:.04em}
+.bgm-frame{display:block;width:330px;height:86px;border:0;margin-top:11px;background:#161210}
 .bgm-row{display:flex;align-items:center;gap:11px;padding:12px 0 10px}
 .bgm-play{
   width:38px;height:38px;flex:0 0 38px;border-radius:50%;
@@ -1114,10 +1115,11 @@ a.dentry.dmini .dlinks{margin-top:16px;padding-top:13px}
 .bgm-vol-label{font-size:11px;color:var(--dim-2);flex:0 0 auto}
 .bgm-volume{flex:1}
 @media(max-width:640px){
-  .bgm{--bgm-w:206px;top:auto;bottom:18px}
+  .bgm{--bgm-w:330px;top:auto;bottom:18px}
   .bgm-tab{width:28px;flex-basis:28px}
-  .bgm-panel{padding:11px}
-  .bgm-vol-label{display:none}
+  .bgm-panel{padding:0;border:none}
+  .bgm-head{display:none}
+  .bgm-frame{margin-top:0}
 }
 
 /* ---------- 存档日历 ----------
