@@ -19,6 +19,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import shutil
 import sys
 from datetime import datetime, timedelta, timezone
@@ -40,6 +41,35 @@ def build_stamp():
     if raw:
         return raw
     return datetime.now(BUILD_TZ).strftime('%Y.%m.%d %H:%M')
+
+
+_SC_HEAD = re.compile(r'^「(.+?)」$')
+
+
+def split_sc(jp, zh):
+    """旧格式首行「用户名：SC 原文」拆成引用块，返回 (sc, 她的发言, 译文)。
+
+    老摘录都是「「观众：原话」\n——她的话」的写法，页面上分不出哪句是观众说的。
+    这里统一拆开，前端把 SC 画成一条引用、她的话作为跟帖；拆不出来就原样返回。
+    """
+    jp_lines = jp.split('\n')
+    zh_lines = zh.split('\n')
+    if not jp_lines or not zh_lines or not zh_lines[0].strip().startswith('「'):
+        return None, jp, zh
+    m = _SC_HEAD.match(jp_lines[0].strip())
+    if not m:
+        return None, jp, zh
+    body = m.group(1).strip()
+    name, text = '', body
+    if '：' in body:
+        head, rest = body.split('：', 1)
+        if len(head) <= 24 and rest.strip():
+            name, text = head.strip(), rest.strip()
+    reply_jp = re.sub(r'^——', '', '\n'.join(jp_lines[1:])).strip()
+    reply_zh = re.sub(r'^——', '', '\n'.join(zh_lines[1:])).strip()
+    if not reply_jp:
+        return None, jp, zh
+    return {'name': name, 'text': text}, reply_jp, reply_zh
 
 
 def inside(t, start, end):
@@ -106,12 +136,19 @@ def collect(site_dir):
         if not hit:
             skipped.append('%s %s' % (q['date'], q['t']))
             continue
-        q_out.append({
+        sc = q.get('sc')
+        jp, zh = q['jp'], q['zh']
+        if not sc:
+            sc, jp, zh = split_sc(jp, zh)
+        entry = {
             'id': 'q%d' % (len(q_out) + 1),
             's': hit['id'], 'date': hit['date'], 'week': hit['week'],
             't': q['t'], 'tag': q['tag'],
-            'jp': q['jp'], 'zh': q['zh'], 'note': q.get('note', ''),
-        })
+            'jp': jp, 'zh': zh, 'note': q.get('note', ''),
+        }
+        if sc:
+            entry['sc'] = sc
+        q_out.append(entry)
 
     # 日记也按 date 找场次；文件顺序即展示顺序（最新的写在最前）
     # 同一天有两场（比如凌晨场 + 白天场）时，光看 date 会全部绑到当天第一场，

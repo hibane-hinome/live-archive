@@ -527,6 +527,18 @@ a.hl .hl-dot{
 .qside .qtime i{display:block;font-style:normal;color:var(--dim-2)}
 .qside .qtime:hover,.qside .qtime:hover i{color:var(--fire-soft)}
 .qbody{min-width:0}
+/* 摘录：观众那条 SC 当作被引用的评论，她的话缩进成跟帖 */
+.qsc{
+  margin:0 0 13px;padding:10px 15px 11px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.055);border-radius:10px;
+}
+.qsc b{
+  display:block;margin-bottom:4px;
+  font:500 11px/1.5 var(--mono);letter-spacing:.05em;color:var(--dim-2);
+}
+.qsc p{margin:0;font-size:13.5px;line-height:1.75;color:var(--dim);white-space:pre-line}
+.qreply.on{padding-left:16px;border-left:1.5px solid rgba(255,122,69,.26)}
 .quote .jp{
   font-family:var(--jp);font-size:14.5px;line-height:1.95;color:var(--dim);
   margin:0 0 13px;letter-spacing:.01em;white-space:pre-line;
@@ -554,6 +566,8 @@ a.hl .hl-dot{
   .qside .qtime{margin-top:0;display:flex;gap:8px}
   .qside .qtime i{display:inline}
   .quote .copy{position:static;justify-self:end;margin-top:8px;opacity:1;padding:4px 0;border:0}
+  .qsc{padding:9px 12px 10px}
+  .qreply.on{padding-left:13px}
 }
 
 /* 场次卡片高度一致，用 grid 行优先排列；多列瀑布流（columns）是列优先，

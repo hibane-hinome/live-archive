@@ -578,7 +578,7 @@
           '<div class="kicker">TRANSCRIPT EXCERPTS</div>' +
           '<h1>摘录<span class="thin">，</span><span class="accent">' + D.meta.quoteCount + '</span> 段</h1>' +
           '<p class="lead">从 ' + num(D.meta.total) + ' 条记录里挑出的 ' + D.meta.quoteCount + ' 段，' +
-          '中日对照，按话题分类。每段连同引出它的那句话一起保留，措辞不做润色。</p>' +
+          '中日对照，按话题分类。每段都标出引出它的那条 SC，她的话原样保留，措辞不做润色。</p>' +
         '</div>' +
       '</section>' +
       '<div class="filters" id="filters">' + chips + '</div>' +
@@ -618,6 +618,14 @@
   }
 
   function quoteCard(q) {
+    // 观众那条（SC）作为被引用的评论放在上面，她的话缩进成跟帖；
+    // 没有 SC 的段落直接就是她自己的讲述，不缩进。
+    var sc = q.sc
+      ? '<div class="qsc">' +
+          (q.sc.name ? '<b>' + esc(q.sc.name) + '</b>' : '') +
+          '<p>' + esc(q.sc.text) + '</p>' +
+        '</div>'
+      : '';
     return '<article class="quote" id="' + q.id + '">' +
       '<div class="qside">' +
         '<span class="tag"' + tagStyle(q.tag) + '>' + esc(q.tag) + '</span>' +
@@ -626,8 +634,11 @@
         '</a>' +
       '</div>' +
       '<div class="qbody">' +
-        '<p class="jp">' + esc(q.jp) + '</p>' +
-        '<p class="zh">' + esc(q.zh) + '</p>' +
+        sc +
+        '<div class="qreply' + (q.sc ? ' on' : '') + '">' +
+          '<p class="jp">' + esc(q.jp) + '</p>' +
+          '<p class="zh">' + esc(q.zh) + '</p>' +
+        '</div>' +
         (q.note ? '<p class="note">' + esc(q.note) + '</p>' : '') +
       '</div>' +
       '<button class="copy" data-id="' + q.id + '">复制</button>' +
@@ -666,7 +677,10 @@
     if (!btn) return;
     var q = D.quotes.filter(function (x) { return x.id === btn.getAttribute('data-id'); })[0];
     if (!q) return;
-    var text = q.zh + '\n' + q.jp + '\n—— ' + D.meta.streamer + ' ' + q.date + ' ' + q.t;
+    var head = q.sc
+      ? '「' + (q.sc.name ? q.sc.name + '：' : '') + q.sc.text + '」\n'
+      : '';
+    var text = head + q.zh + '\n' + q.jp + '\n—— ' + D.meta.streamer + ' ' + q.date + ' ' + q.t;
     var done = function () { btn.textContent = '已复制'; setTimeout(function () { btn.textContent = '复制'; }, 1400); };
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).then(done, done);
@@ -1396,7 +1410,8 @@
 
     var qRows = [], qTotal = 0;
     D.quotes.forEach(function (x) {
-      if (!has(x.jp + ' ' + x.zh + ' ' + x.note + ' ' + x.tag, ql)) return;
+      var scText = x.sc ? (x.sc.name + ' ' + x.sc.text) : '';
+      if (!has(scText + ' ' + x.jp + ' ' + x.zh + ' ' + x.note + ' ' + x.tag, ql)) return;
       qTotal++;
       if (qRows.length < LIMIT.quote) {
         var qmain = has(x.zh, ql) ? x.zh : (has(x.jp, ql) ? x.jp : x.zh);
