@@ -39,6 +39,7 @@ from datetime import datetime, timedelta, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import common
+import asr_fixes
 
 TZ = timezone(timedelta(hours=8))
 
@@ -108,7 +109,8 @@ def _blocks(records, start_ts, timing=None):
             d = _est_dur(jp, zh)
             end = float(ts - start_ts) - END_TAIL
             start = end - d
-        items.append([start, end, zh, jp])
+        # 校正放在取完 timing 之后：timing 的键是机器原始 jp，先改就对不上了。
+        items.append([start, end, asr_fixes.apply(zh), asr_fixes.apply(jp)])
 
     # 时间轴 0 点定在「第一句话开口」，不是「第一条入库记录」：后者要等这句话说完、
     # 翻完才写下，比开口晚好几秒，留着它第一句就会被挤到 0 之前（两句都落在 0 秒）。

@@ -13,6 +13,7 @@ from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import common
+import asr_fixes
 
 
 def main():
@@ -43,10 +44,12 @@ def main():
         name = st.strftime('%Y-%m-%d_%H%M') + '.json'
         kept.add(name)
         payload = dict(meta)
-        payload['records'] = [
-            [datetime.fromtimestamp(t).strftime('%H:%M:%S'), src, tr, common.classify(src, tr)]
-            for t, src, tr in s['recs']
-        ]
+        recs = []
+        for t, src, tr in s['recs']:
+            src, tr = asr_fixes.apply(src), asr_fixes.apply(tr)
+            recs.append([datetime.fromtimestamp(t).strftime('%H:%M:%S'),
+                         src, tr, common.classify(src, tr)])
+        payload['records'] = recs
         path = os.path.join(out_dir, name)
         old = None
         if os.path.exists(path):
